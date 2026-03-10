@@ -625,24 +625,22 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
   return(
     <div className="cell-popup-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
       <div className="cell-popup" onClick={e=>e.stopPropagation()}>
-        {/* Header with glow accent */}
-        <div style={{padding:"16px 18px",borderBottom:"1px solid #1e3a5f25",position:"relative",overflow:"hidden"}}>
+        {/* Header — close button only */}
+        <div style={{padding:"10px 18px 0",display:"flex",justifyContent:"flex-end"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:"2px",background:"linear-gradient(90deg,transparent,#7dd3fc,#4ade80,transparent)"}}/>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{color:"#7dd3fc",fontSize:"15px",fontWeight:800,letterSpacing:"0.5px"}}>{seatLabel}</div>
-              <div style={{color:"#475569",fontSize:"9px",marginTop:"2px"}}>{isNew?"Empty — tap a name to assign":sheet?.firstName||""}</div>
-            </div>
-            {touched?(
-              <button onClick={onClose} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"8px 16px",borderRadius:"10px",fontSize:"12px",fontWeight:800,display:"flex",alignItems:"center",gap:"4px",transition:"all 0.2s",boxShadow:"0 0 12px rgba(74,222,128,0.3)"}}>Done ✓</button>
-            ):(
-              <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#64748b",width:"34px",height:"34px",borderRadius:"10px",fontSize:"15px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>✕</button>
-            )}
-          </div>
+          {touched?(
+            <button onClick={onClose} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"8px 16px",borderRadius:"10px",fontSize:"12px",fontWeight:800,display:"flex",alignItems:"center",gap:"4px",transition:"all 0.2s",boxShadow:"0 0 12px rgba(74,222,128,0.3)"}}>Done ✓</button>
+          ):(
+            <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#64748b",width:"34px",height:"34px",borderRadius:"10px",fontSize:"15px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>✕</button>
+          )}
         </div>
 
         {isNew?(
           <div style={{padding:"14px 18px"}}>
+            <div style={{textAlign:"center",marginBottom:"10px"}}>
+              <div style={{color:"#7dd3fc",fontSize:"15px",fontWeight:800}}>{seatLabel}</div>
+              <div style={{color:"#475569",fontSize:"9px",marginTop:"2px"}}>Empty — tap a name to assign</div>
+            </div>
             <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name..."
               autoFocus style={{width:"100%",background:"#080d13",border:"1px solid #4ade8030",color:"#4ade80",padding:"12px",fontSize:"14px",fontWeight:600,borderRadius:"8px",marginBottom:"10px"}}/>
             {filtered.length>0?(
@@ -669,14 +667,31 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
             </div>
           </div>
         ):(
-          <div style={{padding:"14px 18px"}}>
-            {sheet.imageUrl&&<div style={{marginBottom:"10px",borderRadius:"10px",overflow:"hidden",maxHeight:"120px",border:"1px solid #1e3a5f20"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
-            {/* SEAT — primary */}
-            <div style={{marginBottom:"8px"}}><label style={{fontSize:"9px",color:"#7dd3fc",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>SEAT</label>
-              <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc30",color:"#7dd3fc",padding:"10px",fontSize:"15px",fontWeight:700,borderRadius:"8px"}}/></div>
-            {/* NAME — primary */}
-            <div style={{marginBottom:"8px"}}><label style={{fontSize:"9px",color:"#4ade80",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>NAME</label>
-              <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/></div>
+          <div style={{padding:"8px 18px 14px"}}>
+            {sheet.imageUrl&&<div style={{marginBottom:"8px",borderRadius:"10px",overflow:"hidden",maxHeight:"100px",border:"1px solid #1e3a5f20"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
+            {/* ── NAME CENTERPIECE with neighbor arrows ── */}
+            <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px"}}>
+              {leftName?(
+                hasGroup&&sheet.groupId?(
+                  <button onClick={()=>{onUnlink(index);}} style={{flex:"none",background:"#f59e0b18",border:"1px solid #f59e0b30",color:"#f59e0b",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>← {leftName}</button>
+                ):(
+                  <button onClick={()=>{onLink(index,"left");}} style={{flex:"none",background:"#0f1520",border:"1px dashed #47556940",color:"#475569",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>← {leftName}</button>
+                )
+              ):(<div style={{width:"36px"}}/>)}
+              <div style={{flex:1,textAlign:"center"}}>
+                <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/>
+              </div>
+              {rightName?(
+                hasGroup&&sheet.groupId?(
+                  <button onClick={()=>{onUnlink(index);}} style={{flex:"none",background:"#f59e0b18",border:"1px solid #f59e0b30",color:"#f59e0b",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>{rightName} →</button>
+                ):(
+                  <button onClick={()=>{onLink(index,"right");}} style={{flex:"none",background:"#0f1520",border:"1px dashed #47556940",color:"#475569",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>{rightName} →</button>
+                )
+              ):(<div style={{width:"36px"}}/>)}
+            </div>
+            {/* ── SEAT ── */}
+            <div style={{marginBottom:"8px"}}>
+              <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px 10px",fontSize:"14px",fontWeight:700,borderRadius:"8px",textAlign:"center",letterSpacing:"1px"}}/></div>
             {/* SCORE + RR — compact secondary row */}
             <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"8px"}}>
               <div style={{display:"flex",gap:"3px",alignItems:"center"}}>
@@ -695,25 +710,6 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
             {(sheet.rrStatus==="range"||sheet.rrStatus==="need_ssn"||sheet.rrStatus==="verify")&&(
               <div style={{marginBottom:"8px"}}><input value={sheet.rrDetail||""} onChange={e=>wrappedUpdate(index,"rrDetail",e.target.value)} placeholder="Detail (e.g. 10-30k)" style={{width:"100%",background:"#080d13",border:"1px solid #ea580c20",color:"#ea580c",padding:"8px",fontSize:"12px",fontWeight:600,borderRadius:"6px"}}/></div>
             )}
-            {/* ATTENDING WITH — link adjacent seats */}
-            <div style={{marginBottom:"8px",background:"#080d1380",border:"1px solid #f59e0b15",borderRadius:"8px",padding:"8px"}}>
-              <label style={{fontSize:"8px",color:"#f59e0b80",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>ATTENDING WITH</label>
-              {hasGroup?(
-                <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
-                  <div style={{flex:1,color:"#f59e0b",fontSize:"10px",fontWeight:600}}>
-                    Grouped{leftName?` with ${leftName}`:""}{rightName?` with ${rightName}`:""}
-                  </div>
-                  <button onClick={()=>{onUnlink(index);}} className="with-btn" style={{flex:"none",background:"#f8717115",color:"#f87171",border:"1px solid #f8717130",padding:"6px 10px",fontSize:"9px"}}>Unlink</button>
-                </div>
-              ):(
-                <div style={{display:"flex",gap:"4px"}}>
-                  {leftName?(<button onClick={()=>{onLink(index,"left");}} className="with-btn" style={{background:"#f59e0b15",color:"#f59e0b",border:"1px solid #f59e0b30",fontSize:"9px",padding:"6px 10px"}}>← {leftName}</button>
-                  ):(<div style={{flex:1,color:"#334155",fontSize:"9px",textAlign:"center",padding:"6px"}}>—</div>)}
-                  {rightName?(<button onClick={()=>{onLink(index,"right");}} className="with-btn" style={{background:"#f59e0b15",color:"#f59e0b",border:"1px solid #f59e0b30",fontSize:"9px",padding:"6px 10px"}}>{rightName} →</button>
-                  ):(<div style={{flex:1,color:"#334155",fontSize:"9px",textAlign:"center",padding:"6px"}}>—</div>)}
-                </div>
-              )}
-            </div>
             <div style={{textAlign:"center",marginTop:"4px"}}><button onClick={()=>{if(confirm(`Remove "${sheet.firstName||"this entry"}" from the seating chart? This cannot be undone.`)){onDelete(index);onClose();}}}
               style={{background:"transparent",border:"none",color:"#64748b",padding:"4px 8px",fontSize:"9px",borderRadius:"4px",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"2px",opacity:0.6,transition:"all 0.15s"}}>remove from chart</button></div>
           </div>
