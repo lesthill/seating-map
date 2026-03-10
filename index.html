@@ -569,6 +569,7 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
   const isNew=!sheet;
   const[assignSearch,setAssignSearch]=useState("");
   const[touched,setTouched]=useState(false);
+  const[showRR,setShowRR]=useState(false);
   const wrappedUpdate=(i,f,v)=>{setTouched(true);onUpdate(i,f,v);};
   const unassigned=useMemo(()=>{
     if(!allSheets)return[];
@@ -626,44 +627,56 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
         ):(
           <div style={{padding:"8px 18px 14px"}}>
             {sheet.imageUrl&&<div style={{marginBottom:"8px",borderRadius:"10px",overflow:"hidden",maxHeight:"100px",border:"1px solid #1e3a5f20"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
-            {/* ── NAME CENTERPIECE ── */}
-            <div style={{marginBottom:"4px"}}>
+            {/* ── NAME ── */}
+            <div style={{marginBottom:"8px"}}>
               <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/>
             </div>
-            {/* ── WITH neighbors — independent left/right ── */}
-            {(leftName||rightName)&&(
-            <div style={{display:"flex",gap:"6px",marginBottom:"6px",alignItems:"center"}}>
+            {/* ── SEATED WITH ── */}
+            {(leftName||rightName)&&(<>
+            <div style={{textAlign:"center",color:"#47556980",fontSize:"8px",fontWeight:600,letterSpacing:"1.5px",marginBottom:"4px"}}>SEATED WITH</div>
+            <div style={{display:"flex",gap:"6px",marginBottom:"10px",alignItems:"center"}}>
               {leftName?(
-                <button onClick={()=>{leftLinked?onUnlink(index,"left"):onLink(index,"left")}} style={{flex:1,background:leftLinked?"#f59e0b18":"#0f1520",border:leftLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:leftLinked?"#f59e0b":"#64748b",padding:"8px 6px",borderRadius:"8px",fontSize:"10px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                <button onClick={()=>{leftLinked?onUnlink(index,"left"):onLink(index,"left")}} style={{flex:1,background:leftLinked?"#f59e0b18":"#0f1520",border:leftLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:leftLinked?"#f59e0b":"#64748b",padding:"10px 6px",borderRadius:"8px",fontSize:"11px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {leftLinked?"← "+leftName+" ✓":"← "+leftName}</button>
               ):(<div style={{flex:1}}/>)}
               {rightName?(
-                <button onClick={()=>{rightLinked?onUnlink(index,"right"):onLink(index,"right")}} style={{flex:1,background:rightLinked?"#f59e0b18":"#0f1520",border:rightLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:rightLinked?"#f59e0b":"#64748b",padding:"8px 6px",borderRadius:"8px",fontSize:"10px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                <button onClick={()=>{rightLinked?onUnlink(index,"right"):onLink(index,"right")}} style={{flex:1,background:rightLinked?"#f59e0b18":"#0f1520",border:rightLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:rightLinked?"#f59e0b":"#64748b",padding:"10px 6px",borderRadius:"8px",fontSize:"11px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {rightLinked?rightName+" → ✓":rightName+" →"}</button>
               ):(<div style={{flex:1}}/>)}
-            </div>)}
+            </div></>)}
             {/* ── SEAT ── */}
-            <div style={{marginBottom:"8px"}}>
-              <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px 10px",fontSize:"14px",fontWeight:700,borderRadius:"8px",textAlign:"center",letterSpacing:"1px"}}/></div>
-            {/* SCORE + RR — compact secondary row */}
-            <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"8px"}}>
-              <div style={{display:"flex",gap:"3px",alignItems:"center"}}>
-                <span style={{fontSize:"8px",color:"#fbbf2490",fontWeight:600,marginRight:"2px"}}>SCORE</span>
-                {[1,2,3].map(n=>{const l=SCORE_MAP[n];const a=String(sheet.score)===String(n);return(
-                  <button key={n} onClick={()=>wrappedUpdate(index,"score",a?"":String(n))} style={{width:"28px",height:"28px",background:a?SCORE_COLORS[l]+"25":"#080d13",border:`1px solid ${a?SCORE_COLORS[l]:SCORE_COLORS[l]+"30"}`,color:a?SCORE_COLORS[l]:"#475569",fontSize:"11px",borderRadius:"6px",fontWeight:700,transition:"all 0.15s",padding:0}}>{l}</button>
-                )})}
-              </div>
-              <div style={{flex:1,display:"flex",gap:"3px",alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-                <span style={{fontSize:"8px",color:"#94a3b890",fontWeight:600,marginRight:"2px"}}>RR</span>
-                {RR_OPTIONS.filter(r=>r.value).map(r=>{const a=sheet.rrStatus===r.value;return(
-                  <button key={r.value} onClick={()=>wrappedUpdate(index,"rrStatus",a?"":r.value)} style={{background:a?r.bg:"transparent",border:`1px solid ${a?r.textColor:r.textColor+"20"}`,color:a?r.textColor:"#47556980",padding:"3px 6px",fontSize:"8px",borderRadius:"4px",fontWeight:a?700:500,transition:"all 0.15s"}}>{r.label}</button>
-                )})}
-              </div>
+            <div style={{marginBottom:"10px"}}>
+              <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"10px",fontSize:"15px",fontWeight:700,borderRadius:"8px",textAlign:"center",letterSpacing:"1px"}}/></div>
+            {/* ── SCORE ── */}
+            <div style={{display:"flex",gap:"4px",alignItems:"center",justifyContent:"center",marginBottom:"8px"}}>
+              <span style={{fontSize:"9px",color:"#fbbf2490",fontWeight:600,marginRight:"4px"}}>SCORE</span>
+              {[1,2,3].map(n=>{const l=SCORE_MAP[n];const a=String(sheet.score)===String(n);return(
+                <button key={n} onClick={()=>wrappedUpdate(index,"score",a?"":String(n))} style={{width:"32px",height:"32px",background:a?SCORE_COLORS[l]+"25":"#080d13",border:`1.5px solid ${a?SCORE_COLORS[l]:SCORE_COLORS[l]+"30"}`,color:a?SCORE_COLORS[l]:"#475569",fontSize:"12px",borderRadius:"8px",fontWeight:700,transition:"all 0.15s",padding:0}}>{l}</button>
+              )})}
             </div>
-            {(sheet.rrStatus==="range"||sheet.rrStatus==="need_ssn"||sheet.rrStatus==="verify")&&(
-              <div style={{marginBottom:"8px"}}><input value={sheet.rrDetail||""} onChange={e=>wrappedUpdate(index,"rrDetail",e.target.value)} placeholder="Detail (e.g. 10-30k)" style={{width:"100%",background:"#080d13",border:"1px solid #ea580c20",color:"#ea580c",padding:"8px",fontSize:"12px",fontWeight:600,borderRadius:"6px"}}/></div>
+            {/* ── RR — collapsible ── */}
+            <div style={{textAlign:"center",marginBottom:"6px"}}>
+              {sheet.rrStatus?(()=>{const rr=rrLookup[sheet.rrStatus]||rrLookup[""];return(
+                <button onClick={()=>setShowRR(!showRR)} style={{background:rr.bg,border:`1px solid ${rr.textColor}30`,color:rr.textColor,padding:"4px 12px",fontSize:"10px",fontWeight:600,borderRadius:"6px",cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
+                  {rr.label} {showRR?"▲":"▼"}</button>
+              )})():(
+                <button onClick={()=>setShowRR(!showRR)} style={{background:"transparent",border:"1px dashed #47556930",color:"#64748b",padding:"4px 12px",fontSize:"10px",fontWeight:500,borderRadius:"6px",cursor:"pointer",fontFamily:"inherit"}}>
+                  Set RR Status {showRR?"▲":"▼"}</button>
+              )}
+            </div>
+            {showRR&&(
+              <div style={{marginBottom:"8px"}}>
+                <div style={{display:"flex",gap:"4px",flexWrap:"wrap",justifyContent:"center",marginBottom:"6px"}}>
+                  {RR_OPTIONS.filter(r=>r.value).map(r=>{const a=sheet.rrStatus===r.value;return(
+                    <button key={r.value} onClick={()=>{wrappedUpdate(index,"rrStatus",a?"":r.value);if(!a)setShowRR(false)}} style={{background:a?r.bg:"#080d13",border:`1px solid ${a?r.textColor:r.textColor+"25"}`,color:a?r.textColor:"#64748b",padding:"6px 10px",fontSize:"10px",borderRadius:"6px",fontWeight:a?700:500,transition:"all 0.15s",cursor:"pointer",fontFamily:"inherit"}}>{r.label}</button>
+                  )})}
+                </div>
+              </div>
             )}
-            <div style={{textAlign:"center",marginTop:"4px"}}><button onClick={()=>{if(confirm(`Remove "${sheet.firstName||"this entry"}" from the seating chart? This cannot be undone.`)){onDelete(index);onClose();}}}
+            {(sheet.rrStatus==="range"||sheet.rrStatus==="need_ssn"||sheet.rrStatus==="verify")&&(
+              <div style={{marginBottom:"8px"}}><input value={sheet.rrDetail||""} onChange={e=>wrappedUpdate(index,"rrDetail",e.target.value)} placeholder="Detail (e.g. 10-30k)" style={{width:"100%",background:"#080d13",border:"1px solid #ea580c20",color:"#ea580c",padding:"8px",fontSize:"12px",fontWeight:600,borderRadius:"6px",textAlign:"center"}}/></div>
+            )}
+            <div style={{textAlign:"center",marginTop:"6px"}}><button onClick={()=>{if(confirm(`Remove "${sheet.firstName||"this entry"}" from the seating chart? This cannot be undone.`)){onDelete(index);onClose();}}}
               style={{background:"transparent",border:"none",color:"#64748b",padding:"4px 8px",fontSize:"9px",borderRadius:"4px",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"2px",opacity:0.6,transition:"all 0.15s"}}>remove from chart</button></div>
           </div>
         )}
