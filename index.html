@@ -565,7 +565,7 @@ function NameInput({value,onChange,regNames,placeholder}){
 // ══════════════════════════════════════
 // CELL POPUP — animated inline editor for any seat
 // ══════════════════════════════════════
-function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnlink,regNames,allSheets,leftName,rightName,hasGroup}){
+function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnlink,onAddNew,regNames,allSheets,leftName,rightName,hasGroup}){
   const isNew=!sheet;
   const[assignSearch,setAssignSearch]=useState("");
   const[touched,setTouched]=useState(false);
@@ -620,6 +620,10 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
                 {unassigned.length===0?"Everyone has a seat!":"No matches"}
               </div>
             )}
+            <div style={{borderTop:"1px solid #1e3a5f20",paddingTop:"10px",marginTop:"6px"}}>
+              <button onClick={()=>onAddNew(seatLabel,assignSearch)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#7dd3fc15,#7dd3fc08)",border:"1px solid #7dd3fc20",color:"#7dd3fc",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",transition:"all 0.15s",fontFamily:"inherit"}}>
+                + Add New Person{assignSearch?`: "${assignSearch}"`:""}</button>
+            </div>
           </div>
         ):(
           <div style={{padding:"14px 18px"}}>
@@ -1575,12 +1579,19 @@ function App(){
           else{n[idx]={...n[idx],groupId:""};}
           save(n);
         };
+        const handleAddNew=(seatCode,name)=>{
+          const newSheet={id:"n"+Date.now(),seatCode:seatCode||"",score:"",firstName:name||"",rrStatus:"",rrDetail:"",groupId:""};
+          const n=[...sheets,newSheet];
+          save(n);
+          setPopupCell({...popupCell,idx:n.length-1});
+        };
         return <CellPopup
           seatLabel={seatLabel||sh?.seatCode||"Unassigned"}
           sheet={sh} index={popupCell.idx}
           onUpdate={(i,f,v)=>{updateSheet(i,f,v)}}
           onDelete={(i)=>{deleteSheet(i);closePopup()}}
           onClose={closePopup}
+          onAddNew={handleAddNew}
           onLink={handleLink} onUnlink={handleUnlink}
           regNames={regNames} allSheets={sheets}
           leftName={leftName} rightName={rightName} hasGroup={hasGroup}/>;
