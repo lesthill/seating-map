@@ -992,7 +992,7 @@ function generatePDF(sheets,eventInfo){
         }
 
       }
-      // Draw group connector — horizontal bar spanning grouped cells
+      // Draw group connector — diagonal line spanning grouped cells
       const seen=new Set();
       for(let gs=1;gs<=nS;gs++){
         const gc=secCells[sec]?.[`${r}-${gs}`];
@@ -1000,9 +1000,11 @@ function generatePDF(sheets,eventInfo){
           seen.add(gc.groupId);let ge=gs;
           for(let gs2=gs+1;gs2<=nS;gs2++){const gc2=secCells[sec]?.[`${r}-${gs2}`];if(gc2?.groupId===gc.groupId)ge=gs2;else break;}
           if(ge>gs){
-            const bx=x+rowW+(gs-1)*cW+2;const bw=(ge-gs+1)*cW-4;
-            const by=ry+cH/2-1.5;
-            doc.setFillColor(50,80,180);doc.rect(bx,by,bw,3,"F");
+            const lx1=x+rowW+(gs-1)*cW+2;
+            const lx2=x+rowW+ge*cW-2;
+            const ly1=ry+cH-2;
+            const ly2=ry+2;
+            doc.setDrawColor(50,80,180);doc.setLineWidth(1.2);doc.line(lx1,ly1,lx2,ly2);
           }
         }
       }
@@ -1525,12 +1527,13 @@ function App(){
                         </div>
                       </div>);
                     })}
-                    {/* Group connector — horizontal bar */}
+                    {/* Group connector — diagonal line */}
                     {groupSpans.map(g=>{
                       const cw=67;
-                      const left=(g.start-1)*cw+18+4;
-                      const width=(g.end-g.start+1)*cw-8;
-                      return(<div key={g.gid} style={{position:"absolute",left,top:"50%",width,height:"3px",background:"#3b82f6",borderRadius:"2px",transform:"translateY(-50%)",pointerEvents:"none",zIndex:5,opacity:0.7}}/>);
+                      const left=(g.start-1)*cw+18;
+                      const width=(g.end-g.start+1)*cw;
+                      const rowH=58;
+                      return(<svg key={g.gid} style={{position:"absolute",left,top:0,width,height:rowH,pointerEvents:"none",zIndex:5,opacity:0.7}}><line x1="4" y1={rowH-4} x2={width-4} y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round"/></svg>);
                     })}
                   </div>);})}
                 </div>
