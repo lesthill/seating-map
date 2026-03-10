@@ -69,7 +69,6 @@
   .cell-popup{background:linear-gradient(170deg,#0e1520,#0c1117 40%,#0a0e16);border:1px solid #1e3a5f50;border-radius:16px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto;animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 1px rgba(125,211,252,0.2),inset 0 1px 0 rgba(255,255,255,0.04)}
   .with-btn{flex:1;border:none;padding:10px 4px;font-size:10px;font-weight:700;border-radius:8px;cursor:pointer;transition:all 0.15s;font-family:inherit}
   .with-btn:active{transform:scale(0.95)}
-  .group-hash{position:absolute;top:30%;height:40%;width:4px;background:#f59e0b;border-radius:2px;z-index:2;pointer-events:none;box-shadow:0 0 6px rgba(245,158,11,0.4)}
 </style>
 </head>
 <body>
@@ -82,7 +81,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b29-0309";
+const BUILD="b30-0310";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
@@ -949,11 +948,19 @@ function generatePDF(sheets,eventInfo){
           }
         }
 
-        // Group hash
-        const rightCell=secCells[sec]?.[`${r}-${s+1}`];
-        if(cell?.groupId&&rightCell?.groupId&&cell.groupId===rightCell.groupId){
-          doc.setFillColor(220,130,10);
-          doc.rect(cx+cW-2,ry+cH*0.2,4,cH*0.6,"F");
+      }
+      // Draw group connector — horizontal bar spanning grouped cells
+      const seen=new Set();
+      for(let gs=1;gs<=nS;gs++){
+        const gc=secCells[sec]?.[`${r}-${gs}`];
+        if(gc?.groupId&&!seen.has(gc.groupId)){
+          seen.add(gc.groupId);let ge=gs;
+          for(let gs2=gs+1;gs2<=nS;gs2++){const gc2=secCells[sec]?.[`${r}-${gs2}`];if(gc2?.groupId===gc.groupId)ge=gs2;else break;}
+          if(ge>gs){
+            const bx=x+rowW+(gs-1)*cW+2;const bw=(ge-gs+1)*cW-4;
+            const by=ry+cH/2-1.5;
+            doc.setFillColor(50,80,180);doc.rect(bx,by,bw,3,"F");
+          }
         }
       }
     }
@@ -1442,14 +1449,23 @@ function App(){
                 <div key={sec} style={{marginBottom:"16px"}}>
                   <div style={{textAlign:"center",color:"#e2e8f0",fontSize:"11px",fontWeight:700,letterSpacing:"2px",marginBottom:"3px"}}>SECTION {sec}</div>
                   <div style={{display:"flex",paddingLeft:"18px"}}>{Array.from({length:maxSeat},(_,i)=>(<div key={i} style={{width:"65px",textAlign:"center",color:"#475569",fontSize:"8px",fontWeight:700}}>{i+1}</div>))}</div>
-                  {Array.from({length:maxRow},(_,r)=>(<div key={r} style={{display:"flex",alignItems:"stretch",marginBottom:"1px"}}>
+                  {Array.from({length:maxRow},(_,r)=>{
+                    // Find group spans in this row
+                    const groupSpans=[];const seen=new Set();
+                    for(let s=1;s<=maxSeat;s++){
+                      const c=cells[`${r+1}-${s}`];
+                      if(c?.groupId&&!seen.has(c.groupId)){
+                        seen.add(c.groupId);let end=s;
+                        for(let s2=s+1;s2<=maxSeat;s2++){const c2=cells[`${r+1}-${s2}`];if(c2?.groupId===c.groupId)end=s2;else break;}
+                        if(end>s)groupSpans.push({start:s,end,gid:c.groupId});
+                      }
+                    }
+                    return(<div key={r} style={{display:"flex",alignItems:"stretch",marginBottom:"1px",position:"relative"}}>
                     <div style={{width:"18px",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontSize:"8px",fontWeight:700}}>{r+1}</div>
                     {Array.from({length:maxSeat},(_,s)=>{
                       const cell=cells[`${r+1}-${s+1}`];const rr=cell?rrLookup[cell.rrStatus]||rrLookup[""]:null;const sc=cell?cell.score:null;
                       const scoreBg=sc?SCORE_BG[sc]:null;
                       const scoreColor=sc?SCORE_COLORS[sc]:null;
-                      const rightCell=cells[`${r+1}-${s+2}`];
-                      const showHash=cell&&rightCell&&cell.groupId&&cell.groupId===rightCell.groupId;
                       return(<div key={s} style={{position:"relative"}}>
                         <div onClick={()=>handleCellTap(sec,r+1,s+1,cell?cell.idx:null)} style={{width:"65px",minHeight:"48px",border:`1px solid ${cell?"#1e3a5f50":"#1e3a5f15"}`,borderRadius:"4px",background:cell?scoreBg||"#0f1520":"#0c1117",margin:"0 1px",overflow:"hidden",cursor:"pointer",display:"flex",flexDirection:"column"}}>
                           {cell&&(<div style={{padding:"3px 2px 2px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,gap:"1px"}}>
@@ -1460,10 +1476,16 @@ function App(){
                             )}
                           </div>)}
                         </div>
-                        {showHash&&<div className="group-hash" style={{position:"absolute",right:"-3px",top:"30%",height:"40%"}}/>}
                       </div>);
                     })}
-                  </div>))}
+                    {/* Group connector — horizontal bar */}
+                    {groupSpans.map(g=>{
+                      const cw=67;
+                      const left=(g.start-1)*cw+18+4;
+                      const width=(g.end-g.start+1)*cw-8;
+                      return(<div key={g.gid} style={{position:"absolute",left,top:"50%",width,height:"3px",background:"#3b82f6",borderRadius:"2px",transform:"translateY(-50%)",pointerEvents:"none",zIndex:5,opacity:0.7}}/>);
+                    })}
+                  </div>);})}
                 </div>
               );})}
             </div>
