@@ -82,50 +82,8 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b28-0309";
-const SK="seatmap-v6";const RK="seatmap-reg-v2";const HK="seatmap-history-v1";
-
-// Demo data — shown on first load when localStorage is empty (e.g. GitHub Pages)
-const DEMO_SHEETS=[
-  {id:"d1",seatCode:"A1-4",score:"1",firstName:"Rashida",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d2",seatCode:"A1-5",score:"",firstName:"Raul",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d3",seatCode:"A3-6",score:"2",firstName:"Tyrone",rrStatus:"range",rrDetail:"0-10k",groupId:""},
-  {id:"d4",seatCode:"A5-4",score:"2",firstName:"Gary Reed",rrStatus:"approved",rrDetail:"",groupId:""},
-  {id:"d5",seatCode:"B1-1",score:"2",firstName:"Sherman Banks",rrStatus:"no_sti",rrDetail:"",groupId:""},
-  {id:"d6",seatCode:"B1-2",score:"2",firstName:"Mercy",rrStatus:"range",rrDetail:"30-50k",groupId:""},
-  {id:"d7",seatCode:"B1-3",score:"2",firstName:"Ogo",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d8",seatCode:"B1-5",score:"3",firstName:"Paul",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d9",seatCode:"B1-6",score:"2",firstName:"Antoinette Taylor",rrStatus:"no_sti",rrDetail:"",groupId:""},
-  {id:"d10",seatCode:"B2-5",score:"",firstName:"Jorge",rrStatus:"need_ssn",rrDetail:"",groupId:""},
-  {id:"d11",seatCode:"B2-5",score:"",firstName:"Felipe",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d12",seatCode:"B2-6",score:"2",firstName:"Joseph",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d13",seatCode:"B3-5",score:"",firstName:"Beth",rrStatus:"no_sti",rrDetail:"",groupId:""},
-  {id:"d14",seatCode:"B3-6",score:"",firstName:"Kyle",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d15",seatCode:"B5-2",score:"3",firstName:"Akhwair",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d16",seatCode:"B5-4",score:"",firstName:"Ameyu",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d17",seatCode:"B6-1",score:"",firstName:"Francisca",rrStatus:"no_sti",rrDetail:"",groupId:"g1"},
-  {id:"d18",seatCode:"B6-2",score:"2",firstName:"Jonathan Carrasco",rrStatus:"",rrDetail:"",groupId:"g1"},
-  {id:"d19",seatCode:"B2-1",score:"",firstName:"Eddie Drayton",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d20",seatCode:"B2-2",score:"",firstName:"Danny Hutchings",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d21",seatCode:"B2-4",score:"",firstName:"Denis Manzano",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d22",seatCode:"B2-6",score:"",firstName:"Della Miles",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d23",seatCode:"B3-3",score:"",firstName:"Daniela Kaminski",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d24",seatCode:"B3-4",score:"",firstName:"Kayla Vance",rrStatus:"approved",rrDetail:"",groupId:""},
-  {id:"d25",seatCode:"B3-5",score:"",firstName:"Guilford Houston",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d26",seatCode:"C2-2",score:"",firstName:"Bridgette",rrStatus:"range",rrDetail:"0-15k",groupId:""},
-  {id:"d27",seatCode:"C3-1",score:"",firstName:"Howard",rrStatus:"no_sti",rrDetail:"",groupId:""},
-  {id:"d28",seatCode:"C3-4",score:"",firstName:"Praveen",rrStatus:"",rrDetail:"",groupId:"g2"},
-  {id:"d29",seatCode:"C3-5",score:"",firstName:"Garima",rrStatus:"approved",rrDetail:"",groupId:"g2"},
-  {id:"d30",seatCode:"C3-6",score:"",firstName:"Anthony",rrStatus:"approved",rrDetail:"",groupId:""},
-  {id:"d31",seatCode:"C4-3",score:"",firstName:"Hadiza",rrStatus:"verify",rrDetail:"",groupId:""},
-  {id:"d32",seatCode:"C5-3",score:"",firstName:"Grace",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d33",seatCode:"C6-5",score:"",firstName:"Marcus Little",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d34",seatCode:"C4-5",score:"",firstName:"Christine McDevitt",rrStatus:"decline",rrDetail:"",groupId:""},
-  {id:"d35",seatCode:"C9-5",score:"",firstName:"Paul Wells",rrStatus:"approved",rrDetail:"",groupId:""},
-  {id:"d36",seatCode:"C9-6",score:"",firstName:"Amy Aguilar-Hodder",rrStatus:"",rrDetail:"",groupId:""},
-  {id:"d37",seatCode:"A1-1",score:"",firstName:"Catherine",rrStatus:"",rrDetail:"",groupId:""},
-];
-const DEMO_EVENT={location:"Dallas, TX",date:"Apr 2024",code:"WS-2024-04"};
+const BUILD="b29-0309";
+const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
 class ErrorBoundary extends React.Component{
