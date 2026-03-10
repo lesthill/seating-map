@@ -1200,7 +1200,10 @@ function App(){
       if(v){const d=JSON.parse(v);if(d.length){setSheets(d);
         const hasSeatCodes=d.some(s=>s.seatCode);
         setPhase(hasSeatCodes?"review":"start");
-      }}
+      }}else{
+        // First visit — load demo data
+        setSheets(DEMO_SHEETS);setEventInfo(DEMO_EVENT);setPhase("review");
+      }
       const r=localStorage?.getItem(RK);if(r)setRegNames(JSON.parse(r));
       const ev=localStorage?.getItem(EK);if(ev)setEventInfo(JSON.parse(ev));
       const h=localStorage?.getItem(HK);if(h)setHistory(JSON.parse(h));
