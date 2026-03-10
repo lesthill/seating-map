@@ -1003,7 +1003,7 @@ function generatePDF(sheets,eventInfo){
             for(let si=gs;si<ge;si++){
               const bx=x+rowW+si*cW;
               const by=ry+cH/2-1;
-              doc.setFillColor(50,80,180);doc.rect(bx-5,by,10,2,"F");
+              doc.setFillColor(50,80,180);doc.rect(bx-3.5,by,7,2,"F");
             }
           }
         }
@@ -1533,7 +1533,7 @@ function App(){
                       const lines=[];
                       for(let s=g.start;s<g.end;s++){
                         const cx=(s)*cw+18;
-                        lines.push(<div key={`${g.gid}-${s}`} style={{position:"absolute",left:cx-12,top:"50%",width:24,height:"4px",background:"#3b82f6",borderRadius:"2px",transform:"translateY(-50%)",pointerEvents:"none",zIndex:5,opacity:0.85}}/>);
+                        lines.push(<div key={`${g.gid}-${s}`} style={{position:"absolute",left:cx-8,top:"50%",width:16,height:"4px",background:"#3b82f6",borderRadius:"2px",transform:"translateY(-50%)",pointerEvents:"none",zIndex:5,opacity:0.85}}/>);
                       }
                       return lines;
                     })}
