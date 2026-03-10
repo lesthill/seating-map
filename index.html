@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Seat Chart">
+<meta name="theme-color" content="#080d13">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2VhdGluZyBNYXAgR2VuZXJhdG9yIiwic2hvcnRfbmFtZSI6IlNlYXQgTWFwIiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwODBkMTMiLCJ0aGVtZV9jb2xvciI6IiMwODBkMTMiLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0In0=">
+<title>Seat Chart</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:-webkit-fill-available}
+  body{background:#080d13;min-height:100vh;min-height:-webkit-fill-available;overflow-y:scroll;-webkit-overflow-scrolling:touch;font-family:'IBM Plex Mono',monospace;color:#e2e8f0}
+  select,input,button,textarea{outline:none;-webkit-appearance:none;font-family:inherit}
+  ::-webkit-scrollbar{width:0;height:0}
+  @keyframes flash{0%{opacity:1}100%{opacity:0}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.4)}50%{box-shadow:0 0 0 12px rgba(74,222,128,0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(74,222,128,0.3),0 0 60px rgba(74,222,128,0.1)}50%{box-shadow:0 0 30px rgba(74,222,128,0.5),0 0 80px rgba(74,222,128,0.2)}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .hero-scan{width:100%;border:none;border-radius:20px;padding:32px 24px;cursor:pointer;position:relative;overflow:hidden;animation:glow 3s ease-in-out infinite;background:linear-gradient(145deg,#4ade80 0%,#22c55e 50%,#16a34a 100%);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 4px 24px rgba(74,222,128,0.25),0 1px 0 rgba(255,255,255,0.15) inset}
+  .hero-scan:active{transform:scale(0.96)}
+  .hero-scan-icon{width:56px;height:56px;background:rgba(255,255,255,0.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;border:1px solid rgba(255,255,255,0.15)}
+  .hero-scan-title{font-size:18px;font-weight:800;color:#080d13;letter-spacing:0.3px;margin-bottom:6px}
+  .hero-scan-sub{font-size:12px;color:rgba(8,13,19,0.5);font-weight:500;line-height:1.4}
+  .card{background:linear-gradient(170deg,#0f1520,#0c1117);border:1px solid rgba(125,211,252,0.08);border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.03)}
+  .card-label{font-size:9px;letter-spacing:2.5px;color:#64748b;font-weight:600;margin-bottom:8px;text-transform:uppercase}
+  .btn-action{width:100%;border:none;border-radius:12px;padding:14px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);font-family:inherit;position:relative;overflow:hidden}
+  .btn-action:active{transform:scale(0.97)}
+  .btn-primary{background:linear-gradient(135deg,#7dd3fc20,#7dd3fc10);border:1px solid #7dd3fc25;color:#7dd3fc;box-shadow:0 2px 8px rgba(125,211,252,0.08)}
+  .btn-amber{background:linear-gradient(135deg,#f59e0b20,#f59e0b10);border:1px solid #f59e0b25;color:#f59e0b;box-shadow:0 2px 8px rgba(245,158,11,0.08)}
+  .btn-confirm{background:linear-gradient(135deg,#4ade80,#22c55e);border:none;color:#080d13;font-weight:700;box-shadow:0 2px 12px rgba(74,222,128,0.2)}
+  .btn-cancel{background:transparent;border:1px solid #47556930;color:#64748b}
+  .btn-danger-sm{background:transparent;border:1px solid #f8717118;color:#f87171;padding:4px 10px;font-size:9px;border-radius:6px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+  .input-field{width:100%;background:#080d13;border:1px solid rgba(125,211,252,0.1);color:#e2e8f0;padding:10px 12px;font-size:13px;border-radius:10px;font-family:inherit;transition:border-color 0.2s}
+  .input-field:focus{border-color:rgba(125,211,252,0.3)}
+  .input-field::placeholder{color:#334155}
+  .status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .status-dot.scanning{background:#4ade80;animation:pulse 1.5s infinite}
+  .status-dot.waiting{background:#fbbf24}
+  .spinner{width:24px;height:24px;border:3px solid #1e3a5f;border-top-color:#4ade80;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block}
+  .ac-list{position:absolute;left:0;right:0;top:100%;background:#0f1a2a;border:1px solid #7dd3fc30;border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:50}
+  .ac-item{padding:10px 12px;color:#cbd5e1;font-size:13px;border-bottom:1px solid #1e3a5f15;cursor:pointer}
+  .ac-item:active{background:#1e3a5f30;color:#7dd3fc}
+  .prog-bar{height:4px;background:#1e3a5f;border-radius:2px;overflow:hidden;margin-top:8px}
+  .prog-fill{height:100%;background:#4ade80;transition:width 0.3s}
+  @keyframes popIn{0%{opacity:0;transform:scale(0.8) translateY(24px)}50%{opacity:1;transform:scale(1.03) translateY(-3px)}100%{transform:scale(1) translateY(0)}}
+  @keyframes fadeIn{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(6px)}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  /* Splash intro */
+  @keyframes splashWord{0%{opacity:0;transform:translateY(30px) scale(0.8);filter:blur(8px)}30%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}80%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:1}}
+  @keyframes splashLine{0%{width:0;opacity:0}40%{opacity:1}100%{width:100%;opacity:1}}
+  @keyframes splashZoomOut{0%{transform:scale(1);opacity:1}60%{transform:scale(0.92);opacity:1}100%{transform:scale(0.5);opacity:0;pointer-events:none}}
+  @keyframes splashReveal{0%{opacity:0;transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+  .splash-overlay{position:fixed;inset:0;z-index:9999;background:#080d13;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+  .splash-overlay.exiting{animation:splashZoomOut 0.8s cubic-bezier(0.4,0,0.2,1) forwards}
+  .splash-word{font-size:clamp(28px,8vw,52px);font-weight:800;color:#e2e8f0;opacity:0;line-height:1.2}
+  .splash-word.w1{animation:splashWord 0.7s 0.2s cubic-bezier(0.16,1,0.3,1) forwards}
+  .splash-word.w2{animation:splashWord 0.7s 0.5s cubic-bezier(0.16,1,0.3,1) forwards}
+  .splash-word.w3{animation:splashWord 0.7s 0.8s cubic-bezier(0.16,1,0.3,1) forwards;color:#4ade80}
+  .splash-line{height:2px;background:linear-gradient(90deg,transparent,#4ade80,transparent);margin:16px 0;width:0;opacity:0;animation:splashLine 0.8s 1.3s ease-out forwards}
+  .splash-sub{font-size:clamp(11px,3vw,14px);color:#64748b;opacity:0;letter-spacing:4px;animation:splashWord 0.6s 1.6s ease-out forwards}
+  .app-reveal{animation:splashReveal 0.6s ease-out}
+  .cell-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:900;animation:fadeIn 0.25s ease-out;display:flex;align-items:center;justify-content:center;padding:16px}
+  .cell-popup{background:linear-gradient(170deg,#0e1520,#0c1117 40%,#0a0e16);border:1px solid #1e3a5f50;border-radius:16px;width:100%;max-width:340px;max-height:85vh;overflow-y:auto;animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 1px rgba(125,211,252,0.2),inset 0 1px 0 rgba(255,255,255,0.04)}
+  .with-btn{flex:1;border:none;padding:10px 4px;font-size:10px;font-weight:700;border-radius:8px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+  .with-btn:active{transform:scale(0.95)}
+  .group-hash{position:absolute;top:30%;height:40%;width:4px;background:#f59e0b;border-radius:2px;z-index:2;pointer-events:none;box-shadow:0 0 6px rgba(245,158,11,0.4)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+<script type="text/babel" data-type="module">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+const BUILD="b28-0309";
+const SK="seatmap-v6";const RK="seatmap-reg-v2";const HK="seatmap-history-v1";
+
+// Demo data — shown on first load when localStorage is empty (e.g. GitHub Pages)
+const DEMO_SHEETS=[
+  {id:"d1",seatCode:"A1-4",score:"1",firstName:"Rashida",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d2",seatCode:"A1-5",score:"",firstName:"Raul",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d3",seatCode:"A3-6",score:"2",firstName:"Tyrone",rrStatus:"range",rrDetail:"0-10k",groupId:""},
+  {id:"d4",seatCode:"A5-4",score:"2",firstName:"Gary Reed",rrStatus:"approved",rrDetail:"",groupId:""},
+  {id:"d5",seatCode:"B1-1",score:"2",firstName:"Sherman Banks",rrStatus:"no_sti",rrDetail:"",groupId:""},
+  {id:"d6",seatCode:"B1-2",score:"2",firstName:"Mercy",rrStatus:"range",rrDetail:"30-50k",groupId:""},
+  {id:"d7",seatCode:"B1-3",score:"2",firstName:"Ogo",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d8",seatCode:"B1-5",score:"3",firstName:"Paul",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d9",seatCode:"B1-6",score:"2",firstName:"Antoinette Taylor",rrStatus:"no_sti",rrDetail:"",groupId:""},
+  {id:"d10",seatCode:"B2-5",score:"",firstName:"Jorge",rrStatus:"need_ssn",rrDetail:"",groupId:""},
+  {id:"d11",seatCode:"B2-5",score:"",firstName:"Felipe",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d12",seatCode:"B2-6",score:"2",firstName:"Joseph",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d13",seatCode:"B3-5",score:"",firstName:"Beth",rrStatus:"no_sti",rrDetail:"",groupId:""},
+  {id:"d14",seatCode:"B3-6",score:"",firstName:"Kyle",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d15",seatCode:"B5-2",score:"3",firstName:"Akhwair",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d16",seatCode:"B5-4",score:"",firstName:"Ameyu",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d17",seatCode:"B6-1",score:"",firstName:"Francisca",rrStatus:"no_sti",rrDetail:"",groupId:"g1"},
+  {id:"d18",seatCode:"B6-2",score:"2",firstName:"Jonathan Carrasco",rrStatus:"",rrDetail:"",groupId:"g1"},
+  {id:"d19",seatCode:"B2-1",score:"",firstName:"Eddie Drayton",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d20",seatCode:"B2-2",score:"",firstName:"Danny Hutchings",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d21",seatCode:"B2-4",score:"",firstName:"Denis Manzano",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d22",seatCode:"B2-6",score:"",firstName:"Della Miles",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d23",seatCode:"B3-3",score:"",firstName:"Daniela Kaminski",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d24",seatCode:"B3-4",score:"",firstName:"Kayla Vance",rrStatus:"approved",rrDetail:"",groupId:""},
+  {id:"d25",seatCode:"B3-5",score:"",firstName:"Guilford Houston",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d26",seatCode:"C2-2",score:"",firstName:"Bridgette",rrStatus:"range",rrDetail:"0-15k",groupId:""},
+  {id:"d27",seatCode:"C3-1",score:"",firstName:"Howard",rrStatus:"no_sti",rrDetail:"",groupId:""},
+  {id:"d28",seatCode:"C3-4",score:"",firstName:"Praveen",rrStatus:"",rrDetail:"",groupId:"g2"},
+  {id:"d29",seatCode:"C3-5",score:"",firstName:"Garima",rrStatus:"approved",rrDetail:"",groupId:"g2"},
+  {id:"d30",seatCode:"C3-6",score:"",firstName:"Anthony",rrStatus:"approved",rrDetail:"",groupId:""},
+  {id:"d31",seatCode:"C4-3",score:"",firstName:"Hadiza",rrStatus:"verify",rrDetail:"",groupId:""},
+  {id:"d32",seatCode:"C5-3",score:"",firstName:"Grace",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d33",seatCode:"C6-5",score:"",firstName:"Marcus Little",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d34",seatCode:"C4-5",score:"",firstName:"Christine McDevitt",rrStatus:"decline",rrDetail:"",groupId:""},
+  {id:"d35",seatCode:"C9-5",score:"",firstName:"Paul Wells",rrStatus:"approved",rrDetail:"",groupId:""},
+  {id:"d36",seatCode:"C9-6",score:"",firstName:"Amy Aguilar-Hodder",rrStatus:"",rrDetail:"",groupId:""},
+  {id:"d37",seatCode:"A1-1",score:"",firstName:"Catherine",rrStatus:"",rrDetail:"",groupId:""},
+];
+const DEMO_EVENT={location:"Dallas, TX",date:"Apr 2024",code:"WS-2024-04"};
+
+// Error boundary to catch render crashes
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(e){return{error:e};}
+  componentDidCatch(e,info){console.error("React crash:",e,info);}
+  render(){
+    if(this.state.error)return React.createElement("div",{style:{minHeight:"100vh",background:"#080d13",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px",fontFamily:"monospace"}},
+      React.createElement("div",{style:{color:"#f87171",fontSize:"14px",fontWeight:700,marginBottom:"12px"}},"Something crashed"),
+      React.createElement("div",{style:{color:"#94a3b8",fontSize:"11px",marginBottom:"16px",textAlign:"center",maxWidth:"300px",wordBreak:"break-all"}},String(this.state.error)),
+      React.createElement("button",{onClick:()=>{this.setState({error:null});},style:{background:"#f59e0b",border:"none",color:"#080d13",padding:"12px 24px",borderRadius:"8px",fontSize:"13px",fontWeight:700,marginBottom:"8px"}},"Try Again"),
+      React.createElement("button",{onClick:()=>{localStorage.removeItem(SK);window.location.reload();},style:{background:"#f87171",border:"none",color:"#fff",padding:"12px 24px",borderRadius:"8px",fontSize:"13px",fontWeight:700}},"Reset & Reload")
+    );
+    return this.props.children;
+  }
+}
+
+const SCORE_MAP={1:"A",2:"B",3:"C"};
+const SCORE_COLORS={A:"#0d9488",B:"#f59e0b",C:"#ef4444"};
+// Score band cell backgrounds (dark-mode friendly)
+const SCORE_BG={A:"#0d948820",B:"#f59e0b20",C:"#ef444420"};
+// Score band cell backgrounds (light/print)
+const SCORE_BG_LIGHT={A:"#d1f5ee",B:"#fff3d6",C:"#fee2e2"};
+const RR_OPTIONS=[
+  {value:"",label:"None",bg:"transparent",textColor:"#475569"},
+  {value:"approved",label:"Approved",bg:"#dcfce7",textColor:"#166534"},
+  {value:"no_sti",label:"No STI",bg:"#fce7f3",textColor:"#9d174d"},
+  {value:"decline",label:"Decline",bg:"#fee2e2",textColor:"#991b1b"},
+  {value:"range",label:"Range",bg:"#ffedd5",textColor:"#9a3412"},
+  {value:"need_ssn",label:"Need SSN",bg:"#f5f3ff",textColor:"#5b21b6"},
+  {value:"verify",label:"Verify",bg:"#f5f3ff",textColor:"#5b21b6"},
+];
+const rrLookup=Object.fromEntries(RR_OPTIONS.map(r=>[r.value,r]));
+
+function parseSeatCode(raw){
+  if(!raw)return null;const s=raw.trim().toUpperCase().replace(/[^A-Z0-9-]/g,"");
+  if(s.length<2)return null;const sec=s[0];if(sec<"A"||sec>"Z")return null;
+  const rest=s.slice(1);
+  if(rest.includes("-")){const[r,st]=rest.split("-");const row=parseInt(r),seat=parseInt(st);if(isNaN(row)||isNaN(seat)||row<1||seat<1)return null;return{sec,row,seat};}
+  if(rest.length>=2){const seat=parseInt(rest[rest.length-1]);const row=parseInt(rest.slice(0,-1));if(isNaN(row)||isNaN(seat)||row<1||seat<1)return null;return{sec,row,seat};}
+  return null;
+}
+function scoreToLetter(n){const v=parseInt(n);if(isNaN(v)||v<1)return"";return SCORE_MAP[v]||"";}
+function makeGroupId(){return"g"+Date.now()+Math.random().toString(36).slice(2,6);}
+
+// ── Fuzzy matching ──
+function fuzzyMatch(query,names,limit=6){
+  if(!query||query.length<2)return[];
+  const q=query.toLowerCase().replace(/[^a-z ]/g,"");
+  if(q.length<2)return[];
+  const scored=names.map(n=>{
+    const nl=n.toLowerCase();
+    if(nl===q)return{name:n,score:100};
+    if(nl.startsWith(q))return{name:n,score:80};
+    if(nl.includes(q))return{name:n,score:60};
+    // Check if first/last name starts with query
+    const parts=nl.split(/\s+/);
+    for(const p of parts){if(p.startsWith(q))return{name:n,score:70};}
+    // Character overlap
+    let hits=0,qi=0;
+    for(let i=0;i<nl.length&&qi<q.length;i++){if(nl[i]===q[qi]){hits++;qi++}}
+    const ratio=hits/q.length;
+    if(ratio>=0.6)return{name:n,score:Math.round(ratio*40)};
+    return{name:n,score:0};
+  }).filter(s=>s.score>0).sort((a,b)=>b.score-a.score);
+  return scored.slice(0,limit).map(s=>s.name);
+}
+
+// Best fuzzy match from OCR text against name list
+function bestNameMatch(ocrText,names){
+  if(!ocrText||!names.length)return"";
+  // Clean OCR text
+  const cleaned=ocrText.replace(/[^a-zA-Z\s'-]/g,"").trim();
+  if(!cleaned)return"";
+  // Try the full cleaned text
+  let best=null,bestScore=0;
+  const words=cleaned.split(/\s+/).filter(w=>w.length>1);
+  // Try each word and combinations
+  const candidates=[cleaned,...words];
+  if(words.length>=2)candidates.push(words[0]+" "+words[1]);
+  for(const candidate of candidates){
+    const q=candidate.toLowerCase();
+    for(const name of names){
+      const nl=name.toLowerCase();
+      let score=0;
+      if(nl===q)score=100;
+      else if(nl.startsWith(q)||q.startsWith(nl))score=85;
+      else if(nl.includes(q)||q.includes(nl))score=70;
+      else{
+        // Check first name match
+        const nameParts=nl.split(/\s+/);
+        const qParts=q.split(/\s+/);
+        for(const np of nameParts){
+          for(const qp of qParts){
+            if(np.startsWith(qp)||qp.startsWith(np)){score=Math.max(score,65);}
+            // Levenshtein-ish: count matching chars in order
+            let h=0,qi2=0;
+            for(let i=0;i<np.length&&qi2<qp.length;i++){if(np[i]===qp[qi2]){h++;qi2++}}
+            const r=h/Math.max(np.length,qp.length);
+            if(r>=0.6)score=Math.max(score,Math.round(r*55));
+          }
+        }
+      }
+      if(score>bestScore){bestScore=score;best=name;}
+    }
+  }
+  return bestScore>=30?best:"";
+}
+
+// ── Vision API OCR via local proxy ──
+const PROXY_URL="https://lovely-pears-listen.loca.lt";
+
+async function processImage(imageDataUrl,regNames){
+  try{
+    const resp=await fetch(PROXY_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
+      body:JSON.stringify({image:imageDataUrl}),
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    // Fuzzy match the extracted name against known names
+    let name=data.firstName||"";
+    const last=data.lastName||"";
+    const fullOCR=last?`${name} ${last}`.trim():name;
+    if(fullOCR&&regNames.length>0){
+      const matched=bestNameMatch(fullOCR,regNames);
+      if(matched)name=matched; else name=fullOCR;
+    }else{name=fullOCR;}
+    // Format seat code
+    let seatCode=data.seatCode||"";
+    seatCode=seatCode.toUpperCase().replace(/\s/g,"");
+    if(seatCode&&!seatCode.includes("-")){
+      // Try to format as X#-#
+      const m=seatCode.match(/([A-Z])(\d+)[-.]?(\d)/);
+      if(m)seatCode=`${m[1]}${m[2]}-${m[3]}`;
+    }
+    return{seatCode,firstName:name,score:String(data.score||"").replace(/[^0-9]/g,""),isPrimary:data.isPrimary!==false};
+  }catch(e){
+    console.error("Vision API error:",e);
+    return{seatCode:"",firstName:"",score:"",isPrimary:true};
+  }
+}
+
+// ── XLSX/CSV Parsers ──
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());if(!lines.length)return{headers:[],rows:[]};
+  const first=lines[0];const delim=first.split('\t').length>first.split(',').length?'\t':',';
+  function pl(line){const f=[];let cur="",inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++}else if(ch==='"')inQ=false;else cur+=ch}else{if(ch==='"')inQ=true;else if(ch===delim){f.push(cur.trim());cur=""}else cur+=ch}}f.push(cur.trim());return f;}
+  return{headers:pl(lines[0]),rows:lines.slice(1).map(pl).filter(r=>r.some(c=>c))};
+}
+function parseXLSX(arrayBuffer){
+  const wb=XLSX.read(arrayBuffer,{type:"array"});const results=[];
+  wb.SheetNames.forEach(name=>{const ws=wb.Sheets[name];const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});if(!data.length)return;
+    const headers=data[0].map(h=>String(h||"").trim());const rows=data.slice(1).map(r=>r.map(c=>String(c||"").trim())).filter(r=>r.some(c=>c));
+    if(rows.length>0)results.push({sheetName:name,headers,rows});});return results;
+}
+function parseRRNotes(raw){
+  if(!raw)return{rrStatus:"",rrDetail:""};const t=raw.toLowerCase().trim();
+  if(t.startsWith("decline"))return{rrStatus:"decline",rrDetail:raw.replace(/^decline\s*[-–—:.]?\s*/i,"").substring(0,40)};
+  if(/no\s*sti/i.test(t))return{rrStatus:"no_sti",rrDetail:""};
+  if(/need\s*ssn/i.test(t))return{rrStatus:"need_ssn",rrDetail:""};
+  if(/verify/i.test(t))return{rrStatus:"verify",rrDetail:""};
+  const rm=raw.match(/(\d+[-–]\d+k?\s*(as\s*is)?)/i);if(rm)return{rrStatus:"range",rrDetail:rm[1].trim()};
+  if(/approv/i.test(t))return{rrStatus:"approved",rrDetail:""};
+  return{rrStatus:"",rrDetail:""};
+}
+function autoMapColumns(headers){
+  const map={name:-1,lastName:-1,seat:-1,score:-1,rrStatus:-1,rrDetail:-1};
+  const lh=headers.map(h=>h.toLowerCase().replace(/[^a-z0-9 ]/g,"").trim());
+  lh.forEach((h,i)=>{
+    if(map.name<0&&(h.includes("first")||h==="name"||h==="business name"))map.name=i;
+    if(map.lastName<0&&(h==="last name"||h==="lastname"||h==="last"))map.lastName=i;
+    if(map.seat<0&&(h.includes("seat")||h.includes("position")))map.seat=i;
+    if(map.score<0&&(h==="score"||h.includes("scoreband")))map.score=i;
+    if(map.rrStatus<0&&(h.includes("rr")||h.includes("notes")))map.rrStatus=i;
+    if(map.rrDetail<0&&(h.includes("range")||h.includes("availability")))map.rrDetail=i;
+  });
+  if(map.name<0&&headers.length>0)map.name=0;return map;
+}
+
+// ══════════════════════════════════════
+// AUTO-CAPTURE SCANNER
+// ══════════════════════════════════════
+function Scanner({onCapture,onDone,captureCount}){
+  const videoRef=useRef(null);const canvasRef=useRef(null);const streamRef=useRef(null);const analyzeRef=useRef(null);
+  const prevFrameRef=useRef(null);const stableCountRef=useRef(0);const cooldownRef=useRef(false);
+  const[flash,setFlash]=useState(false);const[status,setStatus]=useState("starting");const[error,setError]=useState(null);
+  const[momMode,setMomMode]=useState(false);
+  const[momIdx,setMomIdx]=useState(0);
+  const momJokes=["...that's what your mom said last night","hold it right there... said your mom","gotcha bitch","steady hands... unlike your mom last night","don't move... your mom didn't either","that's what she said... your mom, specifically","your mom holds it steadier than you"];
+  const momTimerRef=useRef(null);const momCycleRef=useRef(null);
+  useEffect(()=>{
+    if(status==="waiting"){
+      momTimerRef.current=setTimeout(()=>setMomMode(true),5000);
+      return()=>{clearTimeout(momTimerRef.current);clearInterval(momCycleRef.current);setMomMode(false);};
+    }else{setMomMode(false);}
+  },[status]);
+  useEffect(()=>{
+    if(momMode){momCycleRef.current=setInterval(()=>setMomIdx(i=>(i+1)%momJokes.length),4000);return()=>clearInterval(momCycleRef.current);}
+  },[momMode]);
+
+  const STABILITY_THRESHOLD=10;   // Max pixel diff for "stable"
+  const STABLE_FRAMES_NEEDED=25;  // ~0.8s at 30fps — longer wait for focus
+  const MOTION_THRESHOLD=30;      // Min diff for sheet swap
+  const COOLDOWN_MS=1500;         // Pause after capture
+  const SAMPLE_SIZE=100;          // Higher resolution sampling
+  const SHARPNESS_THRESHOLD=15;   // Min Laplacian variance for "in focus"
+  const DOC_CONTRAST_THRESHOLD=40;// Min contrast range for "document present"
+
+  // Viewfinder: letter paper ratio (8.5:11) with slight padding for crop
+  // Frame shown to user
+  const VF_WIDTH=0.58;   // 58% of screen width (portrait paper on portrait phone)
+  const VF_HEIGHT=VF_WIDTH*(11/8.5); // ≈ 75% — maintains letter ratio
+  const VF_LEFT=(1-VF_WIDTH)/2;      // centered horizontally
+  const VF_TOP=0.08;                  // near top, leave room for status bar
+  // Crop area: slightly larger than viewfinder (3% padding each side)
+  const CROP_PAD=0.03;
+  const CROP_LEFT=Math.max(0,VF_LEFT-CROP_PAD);
+  const CROP_TOP=Math.max(0,VF_TOP-CROP_PAD);
+  const CROP_W=Math.min(1-CROP_LEFT,VF_WIDTH+2*CROP_PAD);
+  const CROP_H=Math.min(1-CROP_TOP,VF_HEIGHT+2*CROP_PAD);
+
+  // Compute sharpness using Laplacian variance (edge detection)
+  function computeSharpness(gray,w,h){
+    let sum=0,sum2=0,count=0;
+    for(let y=1;y<h-1;y++){
+      for(let x=1;x<w-1;x++){
+        // Laplacian: center*4 - top - bottom - left - right
+        const lap=4*gray[y*w+x]-gray[(y-1)*w+x]-gray[(y+1)*w+x]-gray[y*w+x-1]-gray[y*w+x+1];
+        sum+=lap;sum2+=lap*lap;count++;
+      }
+    }
+    const mean=sum/count;
+    return Math.sqrt(sum2/count-mean*mean); // variance of Laplacian
+  }
+
+  // Check if there's a document (high contrast white paper with dark text)
+  function checkDocPresence(gray,w,h){
+    // Sample the viewfinder region
+    const x0=Math.floor(w*VF_LEFT),x1=Math.floor(w*(VF_LEFT+VF_WIDTH));
+    const y0=Math.floor(h*VF_TOP),y1=Math.floor(h*(VF_TOP+VF_HEIGHT));
+    let min=255,max=0,brightCount=0,total=0;
+    for(let y=y0;y<y1;y+=2){
+      for(let x=x0;x<x1;x+=2){
+        const v=gray[y*w+x];
+        if(v<min)min=v;if(v>max)max=v;
+        if(v>160)brightCount++;// White-ish pixels (paper)
+        total++;
+      }
+    }
+    const contrast=max-min;
+    const brightRatio=brightCount/total;
+    // Document present = high contrast AND significant bright area (paper)
+    return contrast>DOC_CONTRAST_THRESHOLD&&brightRatio>0.2;
+  }
+
+  const startCam=useCallback(async()=>{
+    try{
+      const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1440}},audio:false});
+      streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;setStatus("scanning");
+    }catch(e){setError("Camera access denied. Check permissions.")}
+  },[]);
+
+  const captureFrame=useCallback(()=>{
+    if(!videoRef.current||!canvasRef.current)return;
+    const v=videoRef.current;const c=canvasRef.current;
+    const vw=v.videoWidth,vh=v.videoHeight;
+    // Crop to viewfinder area + padding
+    const sx=Math.round(CROP_LEFT*vw),sy=Math.round(CROP_TOP*vh);
+    const sw=Math.round(CROP_W*vw),sh=Math.round(CROP_H*vh);
+    c.width=sw;c.height=sh;
+    c.getContext("2d").drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
+    setFlash(true);setTimeout(()=>setFlash(false),200);
+    cooldownRef.current=true;setStatus("captured");
+    const dataUrl=c.toDataURL("image/jpeg",0.85);
+    onCapture(dataUrl);
+    setTimeout(()=>{cooldownRef.current=false;prevFrameRef.current=null;stableCountRef.current=0;setStatus("scanning")},COOLDOWN_MS);
+  },[onCapture]);
+
+  const analyze=useCallback(()=>{
+    if(!videoRef.current||videoRef.current.readyState<2||cooldownRef.current){analyzeRef.current=requestAnimationFrame(analyze);return;}
+    const v=videoRef.current;
+    const tmpC=document.createElement("canvas");tmpC.width=SAMPLE_SIZE;tmpC.height=SAMPLE_SIZE;
+    const ctx=tmpC.getContext("2d");ctx.drawImage(v,0,0,SAMPLE_SIZE,SAMPLE_SIZE);
+    const pixels=ctx.getImageData(0,0,SAMPLE_SIZE,SAMPLE_SIZE).data;
+    const gray=new Uint8Array(SAMPLE_SIZE*SAMPLE_SIZE);
+    for(let i=0;i<gray.length;i++)gray[i]=Math.round(pixels[i*4]*0.299+pixels[i*4+1]*0.587+pixels[i*4+2]*0.114);
+    if(prevFrameRef.current){
+      // 1. Check motion (frame-to-frame diff)
+      let totalDiff=0;
+      for(let i=0;i<gray.length;i++)totalDiff+=Math.abs(gray[i]-prevFrameRef.current[i]);
+      const avgDiff=totalDiff/gray.length;
+
+      if(avgDiff>MOTION_THRESHOLD){
+        // Big motion — sheet being swapped
+        stableCountRef.current=0;setStatus("waiting");
+      }else if(avgDiff<STABILITY_THRESHOLD){
+        stableCountRef.current++;
+
+        if(stableCountRef.current>=STABLE_FRAMES_NEEDED){
+          // 2. Check sharpness (is the image in focus?)
+          const sharpness=computeSharpness(gray,SAMPLE_SIZE,SAMPLE_SIZE);
+          // 3. Check document presence (is there actually a paper with text?)
+          const hasDoc=checkDocPresence(gray,SAMPLE_SIZE,SAMPLE_SIZE);
+
+          if(sharpness>=SHARPNESS_THRESHOLD&&hasDoc){
+            stableCountRef.current=0;
+            captureFrame();
+          }else{
+            // Not ready — keep waiting but don't reset fully
+            stableCountRef.current=STABLE_FRAMES_NEEDED-3;
+            if(!hasDoc)setStatus("waiting"); // no document visible
+          }
+        }
+      }else{
+        // Minor movement
+        stableCountRef.current=Math.max(0,stableCountRef.current-2);
+      }
+    }
+    prevFrameRef.current=gray;
+    analyzeRef.current=requestAnimationFrame(analyze);
+  },[captureFrame]);
+
+  useEffect(()=>{startCam();return()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop());if(analyzeRef.current)cancelAnimationFrame(analyzeRef.current)}},[]);
+  useEffect(()=>{if(status==="scanning"||status==="waiting"){analyzeRef.current=requestAnimationFrame(analyze)}return()=>{if(analyzeRef.current)cancelAnimationFrame(analyzeRef.current)}},[status,analyze]);
+
+  if(error)return(
+    <div style={{position:"fixed",inset:0,background:"#080d13",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{color:"#f87171",fontSize:"16px",fontWeight:700,textAlign:"center",marginBottom:"8px"}}>Camera Needs Permission</div>
+      <div style={{color:"#94a3b8",fontSize:"12px",textAlign:"center",marginBottom:"20px",maxWidth:"280px"}}>Go to your browser settings and allow camera access, then come back and try again.</div>
+      <button onClick={onDone} style={{background:"#1e3a5f",border:"none",color:"#7dd3fc",padding:"14px 28px",borderRadius:"8px",fontSize:"14px",fontWeight:600}}>Go Back</button>
+    </div>
+  );
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#000",zIndex:1000}}>
+      <canvas ref={canvasRef} style={{display:"none"}}/>
+      <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+      {flash&&<div style={{position:"absolute",inset:0,background:"#4ade80",animation:"flash 0.2s ease-out forwards",pointerEvents:"none"}}/>}
+      <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+        <svg width="100%" height="100%" style={{position:"absolute",inset:0}}>
+          <defs><mask id="co"><rect width="100%" height="100%" fill="white"/><rect x={`${VF_LEFT*100}%`} y={`${VF_TOP*100}%`} width={`${VF_WIDTH*100}%`} height={`${VF_HEIGHT*100}%`} rx="12" fill="black"/></mask></defs>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#co)"/>
+        </svg>
+        <div style={{position:"absolute",left:`${VF_LEFT*100}%`,top:`${VF_TOP*100}%`,width:`${VF_WIDTH*100}%`,height:`${VF_HEIGHT*100}%`}}>
+          {[[0,0,"top","left"],[0,1,"top","right"],[1,0,"bottom","left"],[1,1,"bottom","right"]].map(([r,c,v,h])=>(
+            <div key={`${r}${c}`} style={{position:"absolute",[v]:0,[h]:0,width:"28px",height:"28px",
+              [`border${v[0].toUpperCase()+v.slice(1)}`]:`3px solid ${status==="captured"?"#4ade80":"#7dd3fc"}`,
+              [`border${h[0].toUpperCase()+h.slice(1)}`]:`3px solid ${status==="captured"?"#4ade80":"#7dd3fc"}`}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{position:"absolute",top:0,left:0,right:0,padding:"calc(env(safe-area-inset-top) + 12px) 16px 12px",background:"linear-gradient(rgba(0,0,0,0.7),transparent)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+          <span className={`status-dot ${status==="scanning"?"scanning":"waiting"}`}/>
+          <span style={{color:"#fff",fontSize:"11px",fontWeight:600,letterSpacing:"1px",transition:"opacity 0.3s"}}>
+            {status==="scanning"?"READY — LOOKING GOOD":status==="waiting"?(momMode?momJokes[momIdx]:"HOLD STEADY..."):status==="captured"?"GOT IT!":"WARMING UP..."}
+          </span>
+        </div>
+        <div style={{background:"rgba(0,0,0,0.5)",padding:"6px 14px",borderRadius:"20px",display:"flex",alignItems:"center",gap:"6px"}}>
+          <span style={{color:"#4ade80",fontSize:"18px",fontWeight:700}}>{captureCount}</span>
+          <span style={{color:"#94a3b8",fontSize:"10px"}}>{captureCount===1?"sheet":"sheets"}</span>
+        </div>
+      </div>
+      <div style={{position:"absolute",top:`${Math.max(1,VF_TOP*100-3.5)}%`,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+        <div style={{color:"#fff",fontSize:"12px",fontWeight:600,textShadow:"0 1px 4px rgba(0,0,0,0.8)",opacity:0.8}}>
+          {captureCount===0?"Place the goal sheet inside the box":"Nice! Slide the next sheet in"}
+        </div>
+      </div>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,paddingBottom:"calc(env(safe-area-inset-bottom) + 16px)",padding:"16px",display:"flex",justifyContent:"center"}}>
+        <button onClick={onDone} style={{background:captureCount>0?"#4ade80":"rgba(255,255,255,0.15)",border:"none",
+          color:captureCount>0?"#080d13":"#fff",padding:"14px 32px",borderRadius:"30px",fontSize:"14px",fontWeight:700,minWidth:"140px"}}>
+          {captureCount>0?`All Done — ${captureCount} scanned`:"Go Back"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// PROCESSING SCREEN
+// ══════════════════════════════════════
+function Processing({images,regNames,onDone,onCancel}){
+  const[progress,setProgress]=useState(0);
+  const[current,setCurrent]=useState(0);
+  const[results,setResults]=useState([]);
+  const[statusMsg,setStatusMsg]=useState("Connecting to Vision AI...");
+  const[errors,setErrors]=useState(0);
+  const cancelledRef=useRef(false);
+  const processingRef=useRef(false);
+
+  useEffect(()=>{
+    if(processingRef.current)return;
+    processingRef.current=true;
+    (async()=>{
+      const out=[];let errCount=0;
+      for(let i=0;i<images.length;i++){
+        if(cancelledRef.current)break;
+        setCurrent(i+1);setProgress(((i)/images.length)*100);
+        setStatusMsg(`Sending sheet ${i+1} to Vision AI...`);
+        const parsed=await processImage(images[i],regNames);
+        if(cancelledRef.current)break;
+        const hasData=!!(parsed.firstName||parsed.seatCode);
+        if(!hasData)errCount++;
+        setErrors(errCount);
+        setStatusMsg(hasData?`Got: ${parsed.firstName||"?"} @ ${parsed.seatCode||"??"}`:`Sheet ${i+1}: no data returned`);
+        out.push({
+          id:`scan-${Date.now()}-${i}`,
+          seatCode:parsed.seatCode||"",
+          score:parsed.score||"",
+          firstName:parsed.firstName||"",
+          rrStatus:"",rrDetail:"",
+          imageUrl:images[i],
+        });
+        setResults([...out]);
+        setProgress(((i+1)/images.length)*100);
+      }
+      if(!cancelledRef.current){
+        setStatusMsg(`Done! ${out.filter(r=>r.firstName).length} names, ${out.filter(r=>r.seatCode).length} seats found`);
+        setTimeout(()=>onDone(out),600);
+      }
+    })();
+  },[]);
+
+  const handleCancel=()=>{
+    cancelledRef.current=true;
+    if(results.length>0)onDone(results);
+    else onCancel();
+  };
+
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"30px"}}>
+      <div className="spinner" style={{width:"40px",height:"40px",borderWidth:"4px",marginBottom:"20px"}}/>
+      <div style={{color:"#4ade80",fontSize:"13px",fontWeight:700,letterSpacing:"2px",marginBottom:"8px"}}>PROCESSING</div>
+      <div style={{color:"#94a3b8",fontSize:"12px",marginBottom:"4px"}}>Sheet {current} of {images.length}</div>
+      <div style={{color:"#7dd3fc",fontSize:"11px",marginBottom:"4px",textAlign:"center",maxWidth:"280px",minHeight:"16px"}}>{statusMsg}</div>
+      <div style={{width:"100%",maxWidth:"280px",marginTop:"12px"}}>
+        <div className="prog-bar"><div className="prog-fill" style={{width:`${progress}%`}}/></div>
+        <div style={{textAlign:"center",color:"#64748b",fontSize:"10px",marginTop:"6px"}}>{Math.round(progress)}%</div>
+      </div>
+      {results.length>0&&(
+        <div style={{marginTop:"16px",color:"#94a3b8",fontSize:"10px",textAlign:"center",lineHeight:"1.6"}}>
+          <span style={{color:"#4ade80"}}>{results.filter(r=>r.firstName).length} names</span>
+          {" / "}
+          <span style={{color:"#7dd3fc"}}>{results.filter(r=>r.seatCode).length} seats</span>
+          {errors>0&&<span style={{color:"#f87171"}}>{" / "}{errors} failed</span>}
+        </div>
+      )}
+      <button onClick={handleCancel} style={{marginTop:"24px",background:"rgba(248,113,113,0.15)",border:"1px solid #f8717140",color:"#f87171",padding:"12px 28px",borderRadius:"8px",fontSize:"12px",fontWeight:600}}>
+        {results.length>0?"Stop & Use Results":"Cancel"}
+      </button>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// NAME INPUT WITH AUTOCOMPLETE
+// ══════════════════════════════════════
+function NameInput({value,onChange,regNames,placeholder}){
+  const[focused,setFocused]=useState(false);
+  const[query,setQuery]=useState(value);
+  useEffect(()=>{setQuery(value)},[value]);
+  const suggestions=useMemo(()=>focused?fuzzyMatch(query,regNames):[],[query,regNames,focused]);
+  return(
+    <div style={{position:"relative"}}>
+      <input value={query} placeholder={placeholder||"Name"}
+        onFocus={()=>setFocused(true)} onBlur={()=>setTimeout(()=>setFocused(false),200)}
+        onChange={e=>{setQuery(e.target.value);onChange(e.target.value)}}
+        style={{width:"100%",background:"#0c1117",border:"1px solid #4ade8030",color:"#4ade80",padding:"10px",fontSize:"15px",fontWeight:600,borderRadius:suggestions.length?"6px 6px 0 0":"6px"}}/>
+      {suggestions.length>0&&focused&&(
+        <div className="ac-list">
+          {suggestions.map((s,i)=><div key={i} className="ac-item" onMouseDown={e=>{e.preventDefault();setQuery(s);onChange(s);setFocused(false)}}>{s}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// CELL POPUP — animated inline editor for any seat
+// ══════════════════════════════════════
+function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnlink,regNames,allSheets,leftName,rightName,hasGroup}){
+  const isNew=!sheet;
+  const[assignSearch,setAssignSearch]=useState("");
+  const[touched,setTouched]=useState(false);
+  const wrappedUpdate=(i,f,v)=>{setTouched(true);onUpdate(i,f,v);};
+  const unassigned=useMemo(()=>{
+    if(!allSheets)return[];
+    return allSheets.map((s,i)=>({...s,_idx:i})).filter(s=>!parseSeatCode(s.seatCode)&&s.firstName);
+  },[allSheets]);
+  const filtered=useMemo(()=>{
+    if(!assignSearch)return unassigned;
+    return fuzzyMatch(assignSearch,unassigned.map(s=>s.firstName),20).map(name=>unassigned.find(s=>s.firstName===name)).filter(Boolean);
+  },[unassigned,assignSearch]);
+
+  return(
+    <div className="cell-popup-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div className="cell-popup" onClick={e=>e.stopPropagation()}>
+        {/* Header with glow accent */}
+        <div style={{padding:"16px 18px",borderBottom:"1px solid #1e3a5f25",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:"2px",background:"linear-gradient(90deg,transparent,#7dd3fc,#4ade80,transparent)"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{color:"#7dd3fc",fontSize:"15px",fontWeight:800,letterSpacing:"0.5px"}}>{seatLabel}</div>
+              <div style={{color:"#475569",fontSize:"9px",marginTop:"2px"}}>{isNew?"Empty — tap a name to assign":sheet?.firstName||""}</div>
+            </div>
+            {touched?(
+              <button onClick={onClose} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"8px 16px",borderRadius:"10px",fontSize:"12px",fontWeight:800,display:"flex",alignItems:"center",gap:"4px",transition:"all 0.2s",boxShadow:"0 0 12px rgba(74,222,128,0.3)"}}>Done ✓</button>
+            ):(
+              <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#64748b",width:"34px",height:"34px",borderRadius:"10px",fontSize:"15px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>✕</button>
+            )}
+          </div>
+        </div>
+
+        {isNew?(
+          <div style={{padding:"14px 18px"}}>
+            <input value={assignSearch} onChange={e=>setAssignSearch(e.target.value)} placeholder="Search by name..."
+              autoFocus style={{width:"100%",background:"#080d13",border:"1px solid #4ade8030",color:"#4ade80",padding:"12px",fontSize:"14px",fontWeight:600,borderRadius:"8px",marginBottom:"10px"}}/>
+            {filtered.length>0?(
+              <div style={{maxHeight:"220px",overflowY:"auto"}}>
+                {filtered.map(s=>{
+                  const rr=rrLookup[s.rrStatus]||rrLookup[""];
+                  return(
+                    <div key={s._idx} onClick={()=>{onUpdate(s._idx,"seatCode",seatLabel);onClose()}}
+                      style={{padding:"11px 12px",background:"#080d13",border:"1px solid #1e3a5f20",borderRadius:"8px",marginBottom:"4px",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",transition:"all 0.1s"}}>
+                      <span style={{color:"#e2e8f0",fontSize:"13px",fontWeight:600,flex:1}}>{s.firstName}</span>
+                      {s.rrStatus&&<span style={{background:rr.bg,color:rr.textColor,fontSize:"8px",fontWeight:600,padding:"2px 7px",borderRadius:"4px"}}>{rr.label}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            ):(
+              <div style={{color:"#475569",fontSize:"12px",padding:"20px 0",textAlign:"center"}}>
+                {unassigned.length===0?"Everyone has a seat!":"No matches"}
+              </div>
+            )}
+          </div>
+        ):(
+          <div style={{padding:"14px 18px"}}>
+            {sheet.imageUrl&&<div style={{marginBottom:"12px",borderRadius:"10px",overflow:"hidden",maxHeight:"160px",border:"1px solid #1e3a5f20"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"10px"}}>
+              <div><label style={{fontSize:"9px",color:"#7dd3fc",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>SEAT</label>
+                <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc30",color:"#7dd3fc",padding:"10px",fontSize:"15px",fontWeight:700,borderRadius:"8px"}}/></div>
+              <div><label style={{fontSize:"9px",color:"#fbbf24",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>SCORE</label>
+                <div style={{display:"flex",gap:"4px"}}>{[1,2,3].map(n=>{const l=SCORE_MAP[n];const a=String(sheet.score)===String(n);return(
+                  <button key={n} onClick={()=>wrappedUpdate(index,"score",a?"":String(n))} style={{flex:1,background:a?SCORE_COLORS[l]+"25":"#080d13",border:`2px solid ${a?SCORE_COLORS[l]:SCORE_COLORS[l]+"40"}`,color:a?SCORE_COLORS[l]:"#475569",padding:"8px 0",fontSize:"13px",borderRadius:"8px",fontWeight:700,transition:"all 0.15s"}}>{n}→{l}</button>
+                )})}</div></div>
+            </div>
+            <div style={{marginBottom:"10px"}}><label style={{fontSize:"9px",color:"#4ade80",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>NAME</label>
+              <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/></div>
+            <div style={{marginBottom:"10px"}}><label style={{fontSize:"9px",color:"#94a3b8",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>RR STATUS</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px"}}>{RR_OPTIONS.filter(r=>r.value).map(r=>{const a=sheet.rrStatus===r.value;return(
+                <button key={r.value} onClick={()=>wrappedUpdate(index,"rrStatus",a?"":r.value)} style={{background:a?r.bg:"#080d13",border:`1px solid ${a?r.textColor:r.textColor+"30"}`,color:a?r.textColor:"#475569",padding:"7px",fontSize:"10px",borderRadius:"6px",fontWeight:a?700:500,transition:"all 0.15s"}}>{r.label}</button>
+              )})}</div></div>
+            {(sheet.rrStatus==="range"||sheet.rrStatus==="need_ssn"||sheet.rrStatus==="verify")&&(
+              <div style={{marginBottom:"10px"}}><label style={{fontSize:"9px",color:"#ea580c",letterSpacing:"1px",marginBottom:"4px",display:"block",fontWeight:600}}>DETAIL</label>
+                <input value={sheet.rrDetail||""} onChange={e=>wrappedUpdate(index,"rrDetail",e.target.value)} placeholder="e.g. 10-30k" style={{width:"100%",background:"#080d13",border:"1px solid #ea580c30",color:"#ea580c",padding:"10px",fontSize:"14px",fontWeight:600,borderRadius:"8px"}}/></div>
+            )}
+            {/* ATTENDING WITH — link adjacent seats */}
+            <div style={{marginBottom:"10px",background:"#080d13",border:"1px solid #f59e0b25",borderRadius:"10px",padding:"10px"}}>
+              <label style={{fontSize:"9px",color:"#f59e0b",letterSpacing:"1px",marginBottom:"6px",display:"block",fontWeight:600}}>ATTENDING WITH</label>
+              {hasGroup?(
+                <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
+                  <div style={{flex:1,color:"#f59e0b",fontSize:"11px",fontWeight:600}}>
+                    Grouped{leftName?` with ${leftName}`:""}{rightName?` with ${rightName}`:""}
+                  </div>
+                  <button onClick={()=>{onUnlink(index);}} className="with-btn" style={{flex:"none",background:"#f8717115",color:"#f87171",border:"1px solid #f8717130",padding:"8px 12px"}}>Unlink</button>
+                </div>
+              ):(
+                <div style={{display:"flex",gap:"6px"}}>
+                  {leftName?(<button onClick={()=>{onLink(index,"left");}} className="with-btn" style={{background:"#f59e0b15",color:"#f59e0b",border:"1px solid #f59e0b30"}}>← With {leftName}</button>
+                  ):(<div style={{flex:1,color:"#334155",fontSize:"10px",textAlign:"center",padding:"8px"}}>—</div>)}
+                  {rightName?(<button onClick={()=>{onLink(index,"right");}} className="with-btn" style={{background:"#f59e0b15",color:"#f59e0b",border:"1px solid #f59e0b30"}}>With {rightName} →</button>
+                  ):(<div style={{flex:1,color:"#334155",fontSize:"10px",textAlign:"center",padding:"8px"}}>—</div>)}
+                </div>
+              )}
+            </div>
+            <div style={{textAlign:"center",marginTop:"8px"}}><button onClick={()=>{if(confirm(`Remove "${sheet.firstName||"this entry"}" from the seating chart? This cannot be undone.`)){onDelete(index);onClose();}}}
+              style={{background:"transparent",border:"none",color:"#64748b",padding:"4px 8px",fontSize:"9px",borderRadius:"4px",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"2px",opacity:0.6,transition:"all 0.15s"}}>remove from chart</button></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// REVIEW EDITOR (list view)
+// ══════════════════════════════════════
+function SheetEditor({sheet,index,onUpdate,onDelete,regNames,defaultExpanded,onMount}){
+  const[expanded,setExpanded]=useState(defaultExpanded||false);
+  useEffect(()=>{if(onMount)onMount()},[]);
+  const p=parseSeatCode(sheet.seatCode);const sl=scoreToLetter(sheet.score);const rr=rrLookup[sheet.rrStatus]||rrLookup[""];
+  const valid=p&&sheet.firstName;
+  return(
+    <div id={`sheet-${sheet.id}`} style={{background:"#0c1117",border:`1px solid ${valid?"#1e3a5f20":"#f8717130"}`,borderRadius:"8px",marginBottom:"6px",overflow:"hidden"}}>
+      <div onClick={()=>setExpanded(!expanded)} style={{padding:"10px 12px",display:"flex",gap:"10px",alignItems:"center"}}>
+        {sheet.imageUrl&&<div style={{width:"36px",height:"36px",borderRadius:"6px",overflow:"hidden",flexShrink:0,border:"1px solid #1e3a5f30"}}><img src={sheet.imageUrl} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",gap:"4px",alignItems:"center",flexWrap:"wrap"}}>
+            {sheet.seatCode&&<span style={{color:"#7dd3fc",fontSize:"10px",fontWeight:700,background:"#7dd3fc15",padding:"1px 5px",borderRadius:"3px"}}>{sheet.seatCode}</span>}
+            {sl&&<span style={{color:SCORE_COLORS[sl],fontSize:"9px",fontWeight:700,background:SCORE_COLORS[sl]+"20",padding:"1px 5px",borderRadius:"3px"}}>({sl})</span>}
+            {sheet.rrStatus&&<span style={{color:rr.textColor,fontSize:"8px",fontWeight:600,background:rr.bg,padding:"1px 5px",borderRadius:"3px"}}>{rr.label}</span>}
+            {!valid&&<span style={{color:"#f87171",fontSize:"8px"}}>needs edit</span>}
+          </div>
+          <div style={{color:"#e2e8f0",fontSize:"12px",fontWeight:600,marginTop:"1px"}}>{sheet.firstName||"— tap to edit —"}</div>
+        </div>
+        <span style={{color:"#475569",fontSize:"11px"}}>{expanded?"▲":"▼"}</span>
+      </div>
+      {expanded&&(
+        <div style={{padding:"12px",background:"#080d13",borderTop:"1px solid #1e3a5f15"}}>
+          {sheet.imageUrl&&<div style={{marginBottom:"10px",borderRadius:"8px",overflow:"hidden",maxHeight:"200px"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"8px"}}>
+            <div><label style={{fontSize:"9px",color:"#7dd3fc",letterSpacing:"1px",marginBottom:"3px",display:"block",fontWeight:600}}>SEAT</label>
+              <input value={sheet.seatCode} onChange={e=>onUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#0c1117",border:"1px solid #7dd3fc30",color:"#7dd3fc",padding:"10px",fontSize:"15px",fontWeight:700,borderRadius:"6px"}}/></div>
+            <div><label style={{fontSize:"9px",color:"#fbbf24",letterSpacing:"1px",marginBottom:"3px",display:"block",fontWeight:600}}>SCORE</label>
+              <div style={{display:"flex",gap:"4px"}}>{[1,2,3].map(n=>{const l=SCORE_MAP[n];const a=String(sheet.score)===String(n);return(
+                <button key={n} onClick={()=>onUpdate(index,"score",a?"":String(n))} style={{flex:1,background:a?SCORE_COLORS[l]+"25":"#0c1117",border:`2px solid ${a?SCORE_COLORS[l]:SCORE_COLORS[l]+"40"}`,color:a?SCORE_COLORS[l]:"#475569",padding:"8px 0",fontSize:"13px",borderRadius:"6px",fontWeight:700}}>{n}→{l}</button>
+              )})}</div></div>
+          </div>
+          <div style={{marginBottom:"8px"}}><label style={{fontSize:"9px",color:"#4ade80",letterSpacing:"1px",marginBottom:"3px",display:"block",fontWeight:600}}>NAME</label>
+            <NameInput value={sheet.firstName} onChange={v=>onUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/></div>
+          <div style={{marginBottom:"8px"}}><label style={{fontSize:"9px",color:"#94a3b8",letterSpacing:"1px",marginBottom:"3px",display:"block",fontWeight:600}}>RR STATUS</label>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px"}}>{RR_OPTIONS.filter(r=>r.value).map(r=>{const a=sheet.rrStatus===r.value;return(
+              <button key={r.value} onClick={()=>onUpdate(index,"rrStatus",a?"":r.value)} style={{background:a?r.bg:"#0c1117",border:`1px solid ${a?r.textColor:r.textColor+"30"}`,color:a?r.textColor:"#475569",padding:"7px",fontSize:"10px",borderRadius:"6px",fontWeight:a?700:500}}>{r.label}</button>
+            )})}</div></div>
+          {(sheet.rrStatus==="range"||sheet.rrStatus==="need_ssn"||sheet.rrStatus==="verify")&&(
+            <div style={{marginBottom:"8px"}}><label style={{fontSize:"9px",color:"#ea580c",letterSpacing:"1px",marginBottom:"3px",display:"block",fontWeight:600}}>DETAIL</label>
+              <input value={sheet.rrDetail||""} onChange={e=>onUpdate(index,"rrDetail",e.target.value)} placeholder="e.g. 10-30k" style={{width:"100%",background:"#0c1117",border:"1px solid #ea580c30",color:"#ea580c",padding:"10px",fontSize:"14px",fontWeight:600,borderRadius:"6px"}}/></div>
+          )}
+          <button onClick={()=>{if(confirm(`Remove "${sheet.firstName||"this entry"}" from seating chart?`))onDelete(index)}} style={{width:"100%",background:"#f8717110",border:"1px solid #f8717120",color:"#f87171",padding:"8px",fontSize:"11px",borderRadius:"6px",fontWeight:600}}>Remove from Chart</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// EXPORT SCANNED IMAGES AS PDF
+// ══════════════════════════════════════
+async function exportImagesPDF(sheets,onReady){
+  const withImages=sheets.filter(s=>s.imageUrl);
+  if(!withImages.length){alert("No scanned images to export.");return;}
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
+  const pageW=612,pageH=792,margin=30;
+  const imgW=pageW-2*margin,footerH=60;
+  const imgH=pageH-2*margin-footerH;
+
+  for(let i=0;i<withImages.length;i++){
+    if(i>0)doc.addPage();
+    const sh=withImages[i];
+    // Draw the scanned photo
+    try{doc.addImage(sh.imageUrl,"JPEG",margin,margin,imgW,imgH);}catch(e){
+      doc.setFontSize(12);doc.setTextColor(150);doc.text("Image failed to load",pageW/2,pageH/2,{align:"center"});
+    }
+    // Footer bar with metadata for easy OCR pickup
+    const footY=pageH-margin-footerH;
+    doc.setFillColor(240,240,240);doc.rect(margin,footY,imgW,footerH,"F");
+    doc.setDrawColor(200);doc.rect(margin,footY,imgW,footerH,"S");
+    const num=String(i+1).padStart(3,"0");
+    const name=sh.firstName||"—";
+    const seat=sh.seatCode||"—";
+    const score=sh.score||"—";
+    const rr=sh.rrStatus?((rrLookup[sh.rrStatus]||{}).label||sh.rrStatus):"—";
+    const detail=sh.rrDetail||"";
+    // Line 1: big text — name and seat
+    doc.setFont("Helvetica","bold");doc.setFontSize(14);doc.setTextColor(0);
+    doc.text(`#${num}  |  ${name}  |  Seat: ${seat}`,margin+10,footY+20);
+    // Line 2: details
+    doc.setFont("Helvetica","normal");doc.setFontSize(10);doc.setTextColor(80);
+    doc.text(`Score: ${score}  |  RR: ${rr}${detail?" — "+detail:""}`,margin+10,footY+38);
+    // Line 3: machine-readable tag
+    doc.setFontSize(7);doc.setTextColor(160);
+    doc.text(`SCAN:${num}|NAME:${name}|SEAT:${seat}|SCORE:${score}|RR:${rr}|DETAIL:${detail}`,margin+10,footY+52);
+  }
+  const blob=doc.output("blob");const url=URL.createObjectURL(blob);
+  if(onReady)onReady(url);
+  else{const w=window.open(url);if(w)w.onload=()=>w.print();}
+}
+
+// ══════════════════════════════════════
+// PDF GENERATOR
+// ══════════════════════════════════════
+function generatePDF(sheets,eventInfo){
+  const evt=eventInfo||{location:"",date:"",code:""};
+  const entries=[];sheets.forEach(sh=>{const p=parseSeatCode(sh.seatCode);if(!p||!sh.firstName)return;
+    entries.push({sec:p.sec,row:p.row,seat:p.seat,name:sh.firstName,score:scoreToLetter(sh.score),rrStatus:sh.rrStatus||"",rrDetail:sh.rrDetail||"",groupId:sh.groupId||""});
+  });if(!entries.length)return null;
+
+  const secRows={},secSeats={},secCells={};
+  entries.forEach(({sec,row,seat,...rest})=>{
+    secRows[sec]=Math.max(secRows[sec]||0,row);
+    secSeats[sec]=Math.max(secSeats[sec]||0,seat);
+    if(!secCells[sec])secCells[sec]={};
+    secCells[sec][`${row}-${seat}`]=rest;
+  });
+  const sections=Object.keys(secRows).sort();
+
+  // ── Color definitions — vivid enough to read on paper ──
+  const SCORE_BG={A:[180,235,220],B:[255,230,170],C:[255,200,200]};
+  const SCORE_TX={A:[10,120,100],B:[160,100,0],C:[190,40,40]};
+  const RR_TX={approved:[20,100,50],no_sti:[140,20,70],decline:[170,25,25],range:[140,50,15],need_ssn:[80,30,160],verify:[80,30,160]};
+  const RR_LBL={approved:"Approved",no_sti:"No STI",decline:"Decline",range:"Range",need_ssn:"Need SSN",verify:"Verify Info"};
+
+  // ── Page geometry ──
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape",unit:"pt",format:"letter"});
+  const PW=792,PH=612,M=24;
+  const hasEvt=evt.location||evt.date||evt.code;
+  const evtH=hasEvt?18:0;
+  const hdrH=22,colH=14,rowW=16,legH=20,gap=14;
+
+  // ── Smart layout: figure out how many sections fit per row ──
+  // Try all sections on one row first, then 2 rows, etc.
+  const maxR=Math.max(...sections.map(s=>secRows[s]));
+  const MIN_CW=50,MIN_CH=38; // minimum readable cell sizes
+  let secsPerRow=sections.length;
+  let numRowBands=1;
+  // Keep reducing sections per row until cells are big enough
+  for(let spr=sections.length;spr>=1;spr--){
+    const bands=Math.ceil(sections.length/spr);
+    // For each band, compute available width
+    let worstCW=999;
+    for(let b=0;b<bands;b++){
+      const bandSecs=sections.slice(b*spr,(b+1)*spr);
+      const bCols=bandSecs.reduce((s,k)=>s+secSeats[k],0);
+      const bLabels=rowW*bandSecs.length;
+      const bGaps=gap*(bandSecs.length-1);
+      const avail=PW-2*M-bLabels-bGaps;
+      worstCW=Math.min(worstCW,Math.floor(avail/bCols));
+    }
+    const availH=PH-2*M-evtH-legH-(hdrH+colH)*bands-gap*(bands-1);
+    const bandCH=Math.floor(availH/(maxR*bands));
+    if(worstCW>=MIN_CW&&bandCH>=MIN_CH){secsPerRow=spr;numRowBands=bands;break;}
+    if(spr===1){secsPerRow=1;numRowBands=sections.length;break;}
+  }
+
+  // Compute final cell sizes
+  let cW=999,cH;
+  const bands=[];
+  for(let b=0;b<numRowBands;b++){
+    const bandSecs=sections.slice(b*secsPerRow,(b+1)*secsPerRow);
+    bands.push(bandSecs);
+    const bCols=bandSecs.reduce((s,k)=>s+secSeats[k],0);
+    const bLabels=rowW*bandSecs.length;const bGaps=gap*(bandSecs.length-1);
+    const avail=PW-2*M-bLabels-bGaps;
+    cW=Math.min(cW,Math.floor(avail/bCols));
+  }
+  cW=Math.max(36,Math.min(100,cW));
+  const availH=PH-2*M-evtH-legH-(hdrH+colH)*numRowBands-gap*(numRowBands-1);
+  cH=Math.floor(availH/(maxR*numRowBands));
+  cH=Math.max(28,Math.min(64,cH));
+
+  // Font sizes proportional to cell
+  const fName=Math.max(6,Math.min(10,cW*0.13,cH*0.17));
+  const fScore=Math.max(5,fName*0.78);
+  const fRR=Math.max(4.5,fName*0.72);
+  const fDetail=Math.max(4,fName*0.65);
+  const fColRow=Math.max(5.5,Math.min(8,cW*0.1));
+
+  // ── Event header ──
+  let yStart=M;
+  if(hasEvt){
+    const parts=[];
+    if(evt.location)parts.push(evt.location);
+    if(evt.date)parts.push(evt.date);
+    if(evt.code)parts.push(evt.code);
+    doc.setFont("Helvetica","bold");doc.setFontSize(9);doc.setTextColor(60,65,80);
+    doc.text(parts.join("   \u2022   "),PW/2,yStart+10,{align:"center"});
+    yStart+=evtH;
+  }
+
+  // ── Render each band of sections ──
+  let bandY=yStart;
+  bands.forEach((bandSecs,bi)=>{
+    // Center this band horizontally
+    const bandTotalW=bandSecs.reduce((s,k)=>s+rowW+secSeats[k]*cW,0)+gap*(bandSecs.length-1);
+    let x=M+Math.max(0,(PW-2*M-bandTotalW)/2);
+
+    bandSecs.forEach(sec=>{
+    const nR=secRows[sec],nS=secSeats[sec];
+    const secW=rowW+nS*cW;
+
+    // Section header
+    doc.setFont("Helvetica","bold");doc.setFontSize(Math.min(13,cW*0.18));
+    doc.setTextColor(30,35,50);
+    doc.text(`SECTION  ${sec}`,x+secW/2,bandY+14,{align:"center"});
+
+    const gridTop=bandY+hdrH;
+
+    // Column numbers
+    doc.setFont("Helvetica","bold");doc.setFontSize(fColRow);doc.setTextColor(80,90,110);
+    for(let s=1;s<=nS;s++){
+      doc.text(String(s),x+rowW+(s-1)*cW+cW/2,gridTop+10,{align:"center"});
+    }
+
+    // Outer border
+    const gridH=colH+nR*cH;
+    doc.setLineWidth(1.0);doc.setDrawColor(40,45,60);
+    doc.rect(x,gridTop,secW,gridH);
+
+    // Rows
+    for(let r=1;r<=nR;r++){
+      const ry=gridTop+colH+(r-1)*cH;
+
+      // Row number
+      doc.setFont("Helvetica","bold");doc.setFontSize(fColRow);doc.setTextColor(80,90,110);
+      doc.text(String(r),x+rowW/2,ry+cH/2+2,{align:"center"});
+
+      for(let s=1;s<=nS;s++){
+        const cx=x+rowW+(s-1)*cW;
+        const cell=secCells[sec]?.[`${r}-${s}`];
+
+        // Fill
+        if(cell&&cell.score&&SCORE_BG[cell.score]){
+          const[cr,cg,cb]=SCORE_BG[cell.score];
+          doc.setFillColor(cr,cg,cb);
+        }else{
+          doc.setFillColor(255,255,255);
+        }
+        doc.rect(cx,ry,cW,cH,"F");
+
+        // Border
+        doc.setLineWidth(0.4);doc.setDrawColor(170,178,195);
+        doc.rect(cx,ry,cW,cH);
+
+        if(cell){
+          const mx=cx+cW/2;
+          // ── Name (bold, near top) ──
+          let ty=ry+cH*0.3;
+          doc.setFont("Helvetica","bold");doc.setFontSize(fName);doc.setTextColor(15,20,30);
+          // Split long names onto two lines
+          const words=cell.name.split(" ");
+          if(words.length>1&&doc.getTextWidth(cell.name)>cW-6){
+            doc.text(words[0],mx,ty-fName*0.4,{align:"center",maxWidth:cW-4});
+            doc.text(words.slice(1).join(" "),mx,ty+fName*0.5,{align:"center",maxWidth:cW-4});
+          }else{
+            doc.text(cell.name,mx,ty,{align:"center",maxWidth:cW-4});
+          }
+
+          // ── Score label ──
+          if(cell.score){
+            ty=ry+cH*0.55;
+            const[sr,sg,sb]=SCORE_TX[cell.score]||[80,80,80];
+            doc.setFont("Helvetica","normal");doc.setFontSize(fScore);doc.setTextColor(sr,sg,sb);
+            doc.text(`Score (${cell.score})`,mx,ty,{align:"center"});
+          }
+
+          // ── RR status (simple text at bottom) ──
+          if(cell.rrStatus&&RR_LBL[cell.rrStatus]){
+            const label=RR_LBL[cell.rrStatus];
+            const[rr,rg,rb]=RR_TX[cell.rrStatus]||[80,80,80];
+            doc.setFont("Helvetica","normal");doc.setFontSize(fRR);doc.setTextColor(rr,rg,rb);
+            doc.text(label,mx,ry+cH*0.75,{align:"center",maxWidth:cW-4});
+          }
+
+          // ── RR detail ──
+          if(cell.rrDetail){
+            doc.setFont("Helvetica","normal");doc.setFontSize(fDetail);doc.setTextColor(130,100,60);
+            doc.text(cell.rrDetail,mx,ry+cH*0.9,{align:"center",maxWidth:cW-4});
+          }
+        }
+
+        // Group hash
+        const rightCell=secCells[sec]?.[`${r}-${s+1}`];
+        if(cell?.groupId&&rightCell?.groupId&&cell.groupId===rightCell.groupId){
+          doc.setFillColor(220,130,10);
+          doc.rect(cx+cW-2,ry+cH*0.2,4,cH*0.6,"F");
+        }
+      }
+    }
+    x+=secW+gap;
+    }); // end bandSecs.forEach
+    bandY+=hdrH+colH+maxR*cH+gap;
+  }); // end bands.forEach
+
+  // ── Legend ──
+  const ly=PH-M-legH+4;
+  let lx=M;
+  doc.setFont("Helvetica","bold");doc.setFontSize(6);doc.setTextColor(50,55,70);
+  doc.text("RR STATUS:",lx,ly+7);lx+=48;
+  const rrLeg=[["Approved",[180,235,200]],["No STI",[240,220,235]],["Decline",[255,200,200]],["Range (e.g. 10-30k)",[255,225,190]],["Need SSN / Verify",[220,215,250]]];
+  rrLeg.forEach(([label,bg])=>{
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(lx,ly-1,10,10,"F");
+    doc.setLineWidth(0.3);doc.setDrawColor(170,175,185);doc.rect(lx,ly-1,10,10);
+    doc.setFont("Helvetica","normal");doc.setFontSize(5.5);doc.setTextColor(50,55,65);
+    doc.text(label,lx+13,ly+6);lx+=doc.getTextWidth(label)+20;
+  });
+  lx+=10;
+  doc.setFont("Helvetica","bold");doc.setFontSize(6);doc.setTextColor(50,55,70);
+  doc.text("SCORE BAND:",lx,ly+7);lx+=52;
+  [["Score (A) = 1",[10,120,100],[180,235,220]],["Score (B) = 2",[160,100,0],[255,230,170]],["Score (C) = 3",[190,40,40],[255,200,200]]].forEach(([label,tc,bg])=>{
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(lx,ly,12,8,"F");
+    doc.setLineWidth(0.2);doc.setDrawColor(170);doc.rect(lx,ly,12,8);
+    doc.setFont("Helvetica","bold");doc.setFontSize(5.5);doc.setTextColor(tc[0],tc[1],tc[2]);
+    doc.text(label,lx+15,ly+6);lx+=doc.getTextWidth(label)+24;
+  });
+
+  return doc;
+}
+
+// ══════════════════════════════════════
+// START SCREEN
+// ══════════════════════════════════════
+function StartScreen({regNames,sheets,onPasteAttendance,onPasteRR,onScan,onClearNames,onClearRR,eventInfo,onEventInfo,history,onRestore}){
+  const[showAttPaste,setShowAttPaste]=useState(false);
+  const[showRRPaste,setShowRRPaste]=useState(false);
+  const[attText,setAttText]=useState("");
+  const[rrText,setRRText]=useState("");
+
+  // Cross-reference RR data against attendance
+  const rrStats=useMemo(()=>{
+    if(!sheets.length)return null;
+    const attSet=new Set(regNames.map(n=>n.toLowerCase()));
+    let matched=0,unmatched=0;
+    const statusCounts={};
+    sheets.forEach(sh=>{
+      const nl=sh.firstName.toLowerCase();
+      // Check if any attendance name contains or matches
+      const found=[...attSet].some(a=>a.includes(nl.split(" ")[0])||nl.includes(a.split(" ")[0]));
+      if(found)matched++;else unmatched++;
+      const st=sh.rrStatus||"none";
+      statusCounts[st]=(statusCounts[st]||0)+1;
+    });
+    return{matched,unmatched,statusCounts,total:sheets.length};
+  },[sheets,regNames]);
+
+  return(
+    <div className="app-reveal" style={{minHeight:"100vh",padding:"18px",paddingTop:"48px",paddingBottom:"100px",position:"relative",maxWidth:"420px",margin:"0 auto"}}>
+      <div style={{position:"absolute",top:"12px",right:"12px",color:"#334155",fontSize:"8px",fontFamily:"monospace"}}>{BUILD}</div>
+      <div style={{textAlign:"center",marginBottom:"28px"}}>
+        <div style={{fontSize:"11px",letterSpacing:"8px",color:"#4ade80",marginBottom:"4px",fontWeight:600}}>SEATING CHART</div>
+        <div style={{fontSize:"10px",letterSpacing:"4px",color:"#475569",fontWeight:500}}>GENERATOR</div>
+      </div>
+
+      {/* Event info */}
+      <div className="card">
+        <div className="card-label">Event Details</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
+          <div style={{gridColumn:"1/3"}}><input className="input-field" value={eventInfo.location} onChange={e=>onEventInfo({...eventInfo,location:e.target.value})} placeholder="Location (e.g. Dallas, TX)"/></div>
+          <input className="input-field" value={eventInfo.date} onChange={e=>onEventInfo({...eventInfo,date:e.target.value})} placeholder="Date"/>
+          <input className="input-field" value={eventInfo.code} onChange={e=>onEventInfo({...eventInfo,code:e.target.value})} placeholder="Event code"/>
+        </div>
+      </div>
+
+      {/* Attendance names */}
+      <div className="card">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+          <div className="card-label" style={{marginBottom:0}}>Attendance List</div>
+          {regNames.length>0&&<button className="btn-danger-sm" onClick={onClearNames}>Clear</button>}
+        </div>
+        {regNames.length>0?(
+          <div className="status-pill" style={{background:"#4ade8015",color:"#4ade80"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            {regNames.length} names loaded
+          </div>
+        ):!showAttPaste?(
+          <button className="btn-action btn-primary" onClick={()=>setShowAttPaste(true)}>Paste Attendance Data</button>
+        ):(
+          <div>
+            <textarea value={attText} onChange={e=>setAttText(e.target.value)}
+              placeholder="Paste rows from attendance sheet..." rows={3}
+              className="input-field" style={{resize:"vertical",marginBottom:"8px",fontSize:"11px"}}/>
+            <div style={{display:"flex",gap:"8px"}}>
+              <button className="btn-action btn-cancel" style={{flex:1}} onClick={()=>{setShowAttPaste(false);setAttText("")}}>Cancel</button>
+              <button className="btn-action btn-confirm" style={{flex:1}} onClick={()=>{onPasteAttendance(attText);setShowAttPaste(false);setAttText("")}}>Load Names</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* RR Data */}
+      <div className="card">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
+          <div className="card-label" style={{marginBottom:0}}>Red Ridge Data</div>
+          {sheets.length>0&&<button className="btn-danger-sm" onClick={onClearRR}>Clear</button>}
+        </div>
+        {sheets.length>0?(
+          <div>
+            <div style={{display:"flex",gap:"8px",marginBottom:"10px",flexWrap:"wrap",alignItems:"center"}}>
+              {rrStats&&<>
+                <span className="status-pill" style={{background:"#f59e0b15",color:"#f59e0b"}}>{rrStats.total} buyers</span>
+                {regNames.length>0&&<>
+                  <span className="status-pill" style={{background:"#4ade8015",color:"#4ade80"}}>{rrStats.matched} matched</span>
+                  {rrStats.unmatched>0&&<span className="status-pill" style={{background:"#f8717115",color:"#f87171"}}>{rrStats.unmatched} unmatched</span>}
+                </>}
+              </>}
+            </div>
+            {rrStats&&(
+              <div style={{display:"flex",gap:"5px",flexWrap:"wrap"}}>
+                {Object.entries(rrStats.statusCounts).map(([st,count])=>{
+                  const rr=rrLookup[st]||rrLookup[""];
+                  return <span key={st} style={{background:rr.bg||"#1e3a5f20",color:rr.textColor||"#94a3b8",fontSize:"9px",fontWeight:600,padding:"3px 10px",borderRadius:"20px",border:`1px solid ${rr.textColor||"#94a3b8"}15`}}>{rr.label||"No Status"}: {count}</span>;
+                })}
+              </div>
+            )}
+          </div>
+        ):!showRRPaste?(
+          <button className="btn-action btn-amber" onClick={()=>setShowRRPaste(true)}>Paste RR Buyer Data</button>
+        ):(
+          <div>
+            <textarea value={rrText} onChange={e=>setRRText(e.target.value)}
+              placeholder="Paste rows from RR buyer sheet..." rows={3}
+              className="input-field" style={{resize:"vertical",marginBottom:"8px",fontSize:"11px"}}/>
+            <div style={{display:"flex",gap:"8px"}}>
+              <button className="btn-action btn-cancel" style={{flex:1}} onClick={()=>{setShowRRPaste(false);setRRText("")}}>Cancel</button>
+              <button className="btn-action btn-confirm" style={{flex:1,background:"linear-gradient(135deg,#f59e0b,#d97706)"}} onClick={()=>{onPasteRR(rrText);setShowRRPaste(false);setRRText("")}}>Import RR Data</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hero scan button */}
+      <div style={{animation:"slideUp 0.5s ease-out",marginTop:"10px"}}>
+        <button className="hero-scan" onClick={onScan}>
+          <div className="hero-scan-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#080d13" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+          <div className="hero-scan-title">Add Investor Goal Sheets</div>
+          <div className="hero-scan-sub">Point your camera at each sheet — it scans automatically</div>
+        </button>
+      </div>
+
+      {/* Previous charts */}
+      {history.length>0&&(
+        <div className="card" style={{marginTop:"16px"}}>
+          <div className="card-label">Previous Charts</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
+            {history.map(h=>{
+              const evtLabel=[h.event?.location,h.event?.date,h.event?.code].filter(Boolean).join(" — ")||"Untitled";
+              return(
+                <div key={h.id} onClick={()=>onRestore(h)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#080d13",border:"1px solid rgba(125,211,252,0.08)",borderRadius:"10px",cursor:"pointer",transition:"all 0.15s"}}>
+                  <div>
+                    <div style={{color:"#e2e8f0",fontSize:"12px",fontWeight:600}}>{evtLabel}</div>
+                    <div style={{color:"#475569",fontSize:"10px",marginTop:"2px"}}>{h.date} — {h.seated} seated, {h.count} total</div>
+                  </div>
+                  <div style={{color:"#7dd3fc",fontSize:"10px",fontWeight:600,flexShrink:0,marginLeft:"8px"}}>Restore</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════
+// MISSION APP
+// ══════════════════════════════════════
+function App(){
+  // Phases: start → scan → processing → review
+  const[phase,setPhase]=useState("start");
+  const[sheets,setSheets]=useState([]);
+  const[regNames,setRegNames]=useState([]);
+  const[capturedImages,setCapturedImages]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[eventInfo,setEventInfo]=useState({location:"",date:"",code:""});
+  const[splash,setSplash]=useState("playing");
+  const[splashStep,setSplashStep]=useState(0);
+  const[history,setHistory]=useState([]);
+  const fileRef=useRef(null);const regRef=useRef(null);
+  const EK="seatmap-event-v1";
+
+  useEffect(()=>{
+    try{
+      const v=localStorage?.getItem(SK);
+      if(v){const d=JSON.parse(v);if(d.length){setSheets(d);
+        const hasSeatCodes=d.some(s=>s.seatCode);
+        setPhase(hasSeatCodes?"review":"start");
+      }}else{
+        // First visit — load demo data
+        setSheets(DEMO_SHEETS);setEventInfo(DEMO_EVENT);setPhase("review");
+      }
+      const r=localStorage?.getItem(RK);if(r)setRegNames(JSON.parse(r));
+      const ev=localStorage?.getItem(EK);if(ev)setEventInfo(JSON.parse(ev));
+      const h=localStorage?.getItem(HK);if(h)setHistory(JSON.parse(h));
+    }catch(e){}setLoading(false);
+  },[]);
+  // Splash intro sequence — step-driven for reliability
+  useEffect(()=>{
+    if(splash==="done")return;
+    const timers=[];
+    timers.push(setTimeout(()=>setSplashStep(1),200));
+    timers.push(setTimeout(()=>setSplashStep(2),600));
+    timers.push(setTimeout(()=>setSplashStep(3),1000));
+    timers.push(setTimeout(()=>setSplashStep(4),1500));
+    timers.push(setTimeout(()=>setSplash("exiting"),2800));
+    timers.push(setTimeout(()=>setSplash("done"),3600));
+    return()=>timers.forEach(clearTimeout);
+  },[]);
+  const saveEventInfo=useCallback(info=>{
+    setEventInfo(info);try{localStorage?.setItem(EK,JSON.stringify(info))}catch(e){}
+  },[]);
+  const archiveAndReset=useCallback(()=>{
+    if(!sheets.length)return;
+    const entry={
+      id:Date.now(),
+      date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}),
+      event:{...eventInfo},
+      count:sheets.length,
+      seated:sheets.filter(s=>parseSeatCode(s.seatCode)&&s.firstName).length,
+      sheets:sheets.map(({imageUrl,...rest})=>rest) // strip images to save space
+    };
+    const updated=[entry,...history].slice(0,20);
+    setHistory(updated);
+    try{localStorage?.setItem(HK,JSON.stringify(updated))}catch(e){}
+    save([]);setPhase("start");
+  },[sheets,history,eventInfo,save]);
+  const restoreFromHistory=useCallback((entry)=>{
+    save(entry.sheets);
+    if(entry.event)saveEventInfo(entry.event);
+    setPhase("review");
+  },[save,saveEventInfo]);
+  const save=useCallback(data=>{
+    // Coerce all fields to strings to prevent React render crashes
+    const safe=data.map(d=>({...d,seatCode:String(d.seatCode||""),score:String(d.score||""),firstName:String(d.firstName||""),rrStatus:String(d.rrStatus||""),rrDetail:String(d.rrDetail||""),groupId:d.groupId||""}));
+    setSheets(safe);try{const lite=safe.map(({imageUrl,...rest})=>rest);localStorage?.setItem(SK,JSON.stringify(lite))}catch(e){}},[]);
+  const updateSheet=useCallback((i,f,v)=>{const n=[...sheets];n[i]={...n[i],[f]:v};save(n)},[sheets,save]);
+  const deleteSheet=useCallback(i=>{const n=sheets.filter((_,j)=>j!==i);save(n);if(!n.length)setPhase("start")},[sheets,save]);
+
+  const handleCapture=useCallback(dataUrl=>{
+    setCapturedImages(prev=>[...prev,dataUrl]);
+  },[]);
+
+  const handleDoneScan=useCallback(()=>{
+    if(capturedImages.length>0)setPhase("processing");
+    else setPhase(sheets.length>0?"review":"start");
+  },[capturedImages,sheets]);
+
+  const handleProcessingDone=useCallback(processed=>{
+    try{
+      if(!processed||!processed.length){setCapturedImages([]);setPhase("start");return;}
+      // Merge scan results with existing RR data
+      const updated=[...sheets];
+      const usedIndices=new Set();
+      const unmatched=[];
+
+      processed.forEach(scan=>{
+        if(!scan.firstName&&!scan.seatCode){unmatched.push(scan);return;}
+        let bestIdx=-1,bestScore=0;
+        updated.forEach((sh,i)=>{
+          if(usedIndices.has(i))return;
+          const sl=(sh.firstName||"").toLowerCase();const scl=(scan.firstName||"").toLowerCase();
+          if(!sl||!scl)return;
+          let score=0;
+          if(sl===scl)score=100;
+          else if(sl.split(" ")[0]===scl.split(" ")[0])score=80;
+          else{try{const matches=fuzzyMatch(scan.firstName,[sh.firstName],1);if(matches.length)score=60;}catch(e){}}
+          if(score>bestScore){bestScore=score;bestIdx=i;}
+        });
+        if(bestIdx>=0&&bestScore>=60){
+          usedIndices.add(bestIdx);
+          if(scan.seatCode)updated[bestIdx]={...updated[bestIdx],seatCode:scan.seatCode};
+          if(scan.score)updated[bestIdx]={...updated[bestIdx],score:scan.score};
+          if(scan.imageUrl)updated[bestIdx]={...updated[bestIdx],imageUrl:scan.imageUrl};
+        }else{
+          unmatched.push(scan);
+        }
+      });
+      const final=[...updated,...unmatched];
+      console.log("[Processing] Done:",final.length,"sheets,",final.filter(s=>s.seatCode).length,"with seats");
+      save(final);setCapturedImages([]);setPhase("review");
+    }catch(e){
+      console.error("[Processing] Error in handleProcessingDone:",e);
+      // Still try to show what we have
+      if(processed&&processed.length){
+        const fallback=processed.filter(s=>s.firstName||s.seatCode).map(s=>({...s,rrStatus:"",rrDetail:""}));
+        save([...sheets,...fallback]);
+      }
+      setCapturedImages([]);setPhase("review");
+    }
+  },[sheets,save]);
+
+  const[pdfPreview,setPdfPreview]=useState(null);
+  const handleExport=useCallback(()=>{
+    const doc=generatePDF(sheets,eventInfo);if(!doc)return;
+    const blob=doc.output("blob");const url=URL.createObjectURL(blob);
+    setPdfPreview(url);
+  },[sheets,eventInfo]);
+  const handlePrintScans=useCallback(async()=>{
+    await exportImagesPDF(sheets,setPdfPreview);
+  },[sheets]);
+
+  // Parse pasted tab-separated attendance data into names
+  const handlePasteAttendance=useCallback(text=>{
+    if(!text.trim())return;
+    // Try to extract event metadata from the raw text before parsing as CSV
+    const rawLines=text.split(/\r?\n/);
+    const newEvt={...eventInfo};
+    for(const line of rawLines.slice(0,10)){
+      const l=line.trim();
+      // Look for event code patterns like "WS-2024-04" or "EVT123"
+      if(!newEvt.code){const cm=l.match(/\b(WS[-\s]?\d{4}[-\s]?\d{1,2}|EVT[-\s]?\d+|[A-Z]{2,4}[-\s]?\d{4}[-\s]?\d{1,4})\b/i);if(cm)newEvt.code=cm[1];}
+      // Look for date patterns
+      if(!newEvt.date){const dm=l.match(/\b(\w+\s+\d{1,2}[-–,]\s*\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\w+\s+\d{4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s*\d{4})\b/i);if(dm)newEvt.date=dm[1];}
+      // Look for location — city/state patterns or venue names
+      if(!newEvt.location){const lm=l.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2})/);if(lm)newEvt.location=lm[1];}
+    }
+    if(newEvt.date||newEvt.location||newEvt.code)saveEventInfo(newEvt);
+
+    const{headers,rows}=parseCSV(text);
+    let firstCol=-1,lastCol=-1,guestCol=-1;
+    if(headers.length>0){
+      const lh=headers.map(h=>h.toLowerCase().trim());
+      firstCol=lh.findIndex(h=>/first/i.test(h));
+      lastCol=lh.findIndex(h=>/last/i.test(h));
+      guestCol=lh.findIndex(h=>/guest/i.test(h));
+    }
+    const allRows=headers.length>0&&(firstCol>=0||lastCol>=0)?rows:[headers,...rows];
+    if(firstCol<0)firstCol=1;
+    if(lastCol<0)lastCol=2;
+    if(guestCol<0)guestCol=7;
+    let names=allRows.map(r=>{
+      const first=(r[firstCol]||"").trim();const last=(r[lastCol]||"").trim();
+      if(!first)return"";return last?`${first} ${last}`:first;
+    }).filter(Boolean);
+    const guests=allRows.map(r=>(r[guestCol]||"").trim()).filter(Boolean);
+    names=[...names,...guests];
+    const unique=[...new Set(names)].sort();
+    setRegNames(unique);
+    try{localStorage?.setItem(RK,JSON.stringify(unique))}catch(e){}
+  },[eventInfo,saveEventInfo]);
+
+  // Parse pasted tab-separated RR data
+  // RR format: FullName\tFirst\tLast\tPhone\tEmail\tAddress\tPartner\tRR Notes\tSTI
+  // OR with header row: First Name\tLast Name\tPhone\tEmail\t...
+  const handlePasteRR=useCallback(text=>{
+    if(!text.trim())return;
+    const{headers,rows}=parseCSV(text);
+    // Check if first row looks like a header
+    const lh=headers.map(h=>h.toLowerCase());
+    const hasHeader=lh.some(h=>/first|last|name|phone|rr|sti|notes/i.test(h));
+    const allRows=hasHeader?rows:[headers,...rows];
+    // Find column indices
+    let nameIdx=0,lastIdx=-1,rrIdx=-1,stiIdx=-1;
+    if(hasHeader){
+      const map=autoMapColumns(headers);
+      nameIdx=map.name>=0?map.name:0;
+      lastIdx=map.lastName>=0?map.lastName:-1;
+      rrIdx=map.rrStatus>=0?map.rrStatus:-1;
+      // Also check for STI column
+      const stiC=lh.findIndex(h=>h==="sti");
+      if(stiC>=0)stiIdx=stiC;
+    }
+    // Positional fallback for RR buyer sheet format
+    if(rrIdx<0){
+      // Look for the column that contains RR-like data (Decline, k as is, Approved, etc.)
+      const sampleRow=allRows[0]||[];
+      for(let c=0;c<sampleRow.length;c++){
+        const v=sampleRow[c].toLowerCase();
+        if(/decline|approved|as is|no sti|need ssn|\d+-\d+k/i.test(v)){rrIdx=c;break;}
+      }
+    }
+    if(rrIdx<0)rrIdx=7; // last resort default
+
+    const newSheets=allRows.map((row,i)=>{
+      // Try to get the best name: col0 often has full name, or combine first+last
+      let full="";
+      if(lastIdx>=0){
+        const first=(row[nameIdx]||"").trim();const last=(row[lastIdx]||"").trim();
+        full=last?`${first} ${last}`.trim():first;
+      }else{
+        full=(row[nameIdx]||"").trim();
+        // If col0 looks like a full name (has space), use it; otherwise try col0
+        if(!full.includes(" ")&&row[1]&&row[2]){
+          full=`${(row[1]||"").trim()} ${(row[2]||"").trim()}`.trim();
+        }
+      }
+      if(!full)return null;
+      const rrRaw=(row[rrIdx]||"").trim();const parsed=parseRRNotes(rrRaw);
+      return{id:`imp-${Date.now()}-${i}`,seatCode:"",score:"",firstName:full,rrStatus:parsed.rrStatus,rrDetail:parsed.rrDetail,imageUrl:null};
+    }).filter(Boolean);
+    const merged=[...sheets,...newSheets];save(merged);
+    // Stay on start — don't jump to review yet
+  },[sheets,save]);
+
+  const validCount=sheets.filter(sh=>parseSeatCode(sh.seatCode)&&sh.firstName).length;
+
+  // ALL HOOKS MUST BE BEFORE ANY EARLY RETURNS (React rules of hooks)
+  const[reviewTab,setReviewTab]=useState("map");
+  const[editIdx,setEditIdx]=useState(null);
+  const mapData=useMemo(()=>{
+    const sd={};
+    sheets.forEach((sh,idx)=>{const p=parseSeatCode(sh.seatCode);if(!p||!sh.firstName)return;
+      if(!sd[p.sec])sd[p.sec]={maxRow:0,maxSeat:0,cells:{}};
+      sd[p.sec].maxRow=Math.max(sd[p.sec].maxRow,p.row);sd[p.sec].maxSeat=Math.max(sd[p.sec].maxSeat,p.seat);
+      sd[p.sec].cells[`${p.row}-${p.seat}`]={name:sh.firstName,score:scoreToLetter(sh.score),rrStatus:sh.rrStatus||"",rrDetail:sh.rrDetail||"",groupId:sh.groupId||"",idx};
+    });return sd;
+  },[sheets]);
+  const mapSections=Object.keys(mapData).sort();
+  const unmapped=sheets.filter(sh=>!parseSeatCode(sh.seatCode)||!sh.firstName);
+
+  const[popupCell,setPopupCell]=useState(null); // {sec,row,seat,idx} or null
+  const handleCellTap=useCallback((sec,row,seat,idx)=>{setPopupCell({sec,row,seat,idx})},[]);
+  const closePopup=useCallback(()=>setPopupCell(null),[]);
+
+  // ── EARLY RETURNS (after all hooks) ──
+  // Splash plays over loading
+  if(splash!=="done"||loading){
+    const wordStyle=(visible)=>({
+      fontSize:"clamp(28px,8vw,52px)",fontWeight:800,color:"#e2e8f0",lineHeight:1.2,
+      opacity:visible?1:0,transform:visible?"translateY(0) scale(1)":"translateY(30px) scale(0.8)",
+      filter:visible?"blur(0)":"blur(8px)",transition:"all 0.5s cubic-bezier(0.16,1,0.3,1)"
+    });
+    const exitStyle=splash==="exiting"?{transform:"scale(0.5)",opacity:0,transition:"all 0.8s cubic-bezier(0.4,0,0.2,1)"}:{};
+    return(
+      <div style={{position:"fixed",inset:0,zIndex:9999,background:"#080d13",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",...exitStyle}}>
+        <div style={wordStyle(splashStep>=1)}>Let's do the</div>
+        <div style={wordStyle(splashStep>=2)}>Seating</div>
+        <div style={{...wordStyle(splashStep>=3),color:"#4ade80"}}>Chart</div>
+        <div style={{height:2,background:"linear-gradient(90deg,transparent,#4ade80,transparent)",margin:"16px 0",
+          width:splashStep>=4?"60%":"0",opacity:splashStep>=4?1:0,transition:"all 0.8s ease-out"}}/>
+        <div style={{fontSize:"clamp(11px,3vw,14px)",color:"#64748b",letterSpacing:"4px",fontWeight:600,
+          opacity:splashStep>=4?1:0,transform:splashStep>=4?"translateY(0)":"translateY(10px)",transition:"all 0.5s ease-out"}}>
+          LETS FUCKING GOOOOOOOO!!!!!</div>
+      </div>
+    );
+  }
+  if(phase==="scan")return <Scanner onCapture={handleCapture} onDone={handleDoneScan} captureCount={capturedImages.length}/>;
+  if(phase==="processing")return <Processing images={capturedImages} regNames={regNames} onDone={handleProcessingDone} onCancel={()=>{setCapturedImages([]);setPhase(sheets.length>0?"review":"start")}}/>;
+  if(phase==="start")return <StartScreen regNames={regNames} sheets={sheets}
+    onPasteAttendance={handlePasteAttendance} onPasteRR={handlePasteRR}
+    onScan={()=>{setCapturedImages([]);setPhase("scan")}}
+    onClearNames={()=>{setRegNames([]);localStorage?.removeItem(RK)}}
+    onClearRR={()=>{save([])}}
+    eventInfo={eventInfo} onEventInfo={saveEventInfo}
+    history={history} onRestore={restoreFromHistory}/>;
+
+  // ── REVIEW PHASE ──
+  return(
+    <div style={{minHeight:"100vh",paddingBottom:"80px"}}>
+      <div style={{background:"linear-gradient(180deg,#0e1628,#0a1120 80%,#080d1300)",padding:"16px 16px 12px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+          <div>
+            <div style={{fontSize:"9px",letterSpacing:"5px",color:"#4ade80",fontWeight:600}}>SEATING CHART</div>
+            <div style={{fontSize:"11px",color:"#94a3b8",marginTop:"3px",fontWeight:500}}>{validCount} placed{unmapped.length>0?`, ${unmapped.length} need seats`:""}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+            <span style={{color:"#334155",fontSize:"7px",fontFamily:"monospace"}}>{BUILD}</span>
+            <button onClick={()=>{setCapturedImages([]);setPhase("scan")}} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"10px 16px",fontSize:"11px",borderRadius:"10px",fontWeight:700,boxShadow:"0 4px 16px rgba(74,222,128,0.2)",cursor:"pointer",transition:"all 0.2s cubic-bezier(0.34,1.56,0.64,1)",fontFamily:"inherit"}}>+ Add Sheets</button>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:"6px",background:"#080d13",borderRadius:"10px",padding:"3px",border:"1px solid #1e3a5f15"}}>
+          <button onClick={()=>setReviewTab("map")} style={{flex:1,background:reviewTab==="map"?"linear-gradient(135deg,#7dd3fc18,#7dd3fc08)":"transparent",border:"none",color:reviewTab==="map"?"#7dd3fc":"#475569",padding:"10px",fontSize:"11px",borderRadius:"8px",fontWeight:600,cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit"}}>Map View</button>
+          <button onClick={()=>setReviewTab("list")} style={{flex:1,background:reviewTab==="list"?"linear-gradient(135deg,#7dd3fc18,#7dd3fc08)":"transparent",border:"none",color:reviewTab==="list"?"#7dd3fc":"#475569",padding:"10px",fontSize:"11px",borderRadius:"8px",fontWeight:600,cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit"}}>List ({sheets.length})</button>
+        </div>
+      </div>
+
+      {reviewTab==="map"&&(
+        <div style={{padding:"10px"}}>
+          {mapSections.length>0?(
+            <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"8px"}}>
+              {mapSections.map(sec=>{const{maxRow,maxSeat,cells}=mapData[sec];return(
+                <div key={sec} style={{marginBottom:"16px"}}>
+                  <div style={{textAlign:"center",color:"#e2e8f0",fontSize:"11px",fontWeight:700,letterSpacing:"2px",marginBottom:"3px"}}>SECTION {sec}</div>
+                  <div style={{display:"flex",paddingLeft:"18px"}}>{Array.from({length:maxSeat},(_,i)=>(<div key={i} style={{width:"65px",textAlign:"center",color:"#475569",fontSize:"8px",fontWeight:700}}>{i+1}</div>))}</div>
+                  {Array.from({length:maxRow},(_,r)=>(<div key={r} style={{display:"flex",alignItems:"stretch",marginBottom:"1px"}}>
+                    <div style={{width:"18px",display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontSize:"8px",fontWeight:700}}>{r+1}</div>
+                    {Array.from({length:maxSeat},(_,s)=>{
+                      const cell=cells[`${r+1}-${s+1}`];const rr=cell?rrLookup[cell.rrStatus]||rrLookup[""]:null;const sc=cell?cell.score:null;
+                      const scoreBg=sc?SCORE_BG[sc]:null;
+                      const scoreColor=sc?SCORE_COLORS[sc]:null;
+                      const rightCell=cells[`${r+1}-${s+2}`];
+                      const showHash=cell&&rightCell&&cell.groupId&&cell.groupId===rightCell.groupId;
+                      return(<div key={s} style={{position:"relative"}}>
+                        <div onClick={()=>handleCellTap(sec,r+1,s+1,cell?cell.idx:null)} style={{width:"65px",minHeight:"48px",border:`1px solid ${cell?"#1e3a5f50":"#1e3a5f15"}`,borderRadius:"4px",background:cell?scoreBg||"#0f1520":"#0c1117",margin:"0 1px",overflow:"hidden",cursor:"pointer",display:"flex",flexDirection:"column"}}>
+                          {cell&&(<div style={{padding:"3px 2px 2px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flex:1,gap:"1px"}}>
+                            <div style={{color:"#e2e8f0",fontSize:"8px",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60px",textAlign:"center"}}>{cell.name}</div>
+                            {sc&&<div style={{color:scoreColor,fontSize:"7px",fontWeight:600}}>Score ({sc})</div>}
+                            {cell.rrStatus&&rr?.bg!=="transparent"&&(
+                              <div style={{background:rr.bg,color:rr.textColor,fontSize:"6px",fontWeight:600,padding:"1px 4px",borderRadius:"2px",marginTop:"1px",textAlign:"center",border:`1px solid ${rr.textColor}30`}}>{rr.label}</div>
+                            )}
+                          </div>)}
+                        </div>
+                        {showHash&&<div className="group-hash" style={{position:"absolute",right:"-3px",top:"30%",height:"40%"}}/>}
+                      </div>);
+                    })}
+                  </div>))}
+                </div>
+              );})}
+            </div>
+          ):(
+            <div style={{padding:"40px",textAlign:"center",color:"#475569"}}>No seats mapped yet. Scan goal sheets to assign seat assignments.</div>
+          )}
+          {unmapped.length>0&&(
+            <div style={{background:"#0c1117",border:"1px solid #f8717120",borderRadius:"8px",padding:"12px",marginTop:"8px"}}>
+              <div style={{fontSize:"9px",letterSpacing:"2px",color:"#f87171",fontWeight:600,marginBottom:"6px"}}>NEED SEATS ({unmapped.length})</div>
+              {unmapped.map((sh,i)=>{const rr=rrLookup[sh.rrStatus]||rrLookup[""];const idx=sheets.indexOf(sh);return(
+                <div key={sh.id} onClick={()=>setPopupCell({sec:null,row:null,seat:null,idx})} style={{display:"flex",alignItems:"center",gap:"6px",padding:"5px 0",borderBottom:"1px solid #1e3a5f10",cursor:"pointer"}}>
+                  {sh.rrStatus&&<span style={{background:rr.bg,color:rr.textColor,fontSize:"8px",fontWeight:600,padding:"1px 5px",borderRadius:"3px"}}>{rr.label}</span>}
+                  <span style={{color:"#e2e8f0",fontSize:"11px"}}>{sh.firstName||"unnamed"}</span>
+                </div>
+              );})}
+            </div>
+          )}
+          {/* Legend */}
+          <div style={{marginTop:"10px",padding:"8px 10px",background:"#0c1117",borderRadius:"6px",border:"1px solid #1e3a5f15"}}>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap",fontSize:"8px",marginBottom:"5px",alignItems:"center"}}>
+              <span style={{color:"#64748b",fontWeight:700,marginRight:"2px"}}>RR STATUS:</span>
+              {RR_OPTIONS.filter(r=>r.value).map(r=>(<span key={r.value} style={{background:r.bg,color:r.textColor,padding:"2px 6px",borderRadius:"3px",fontWeight:600,border:`1px solid ${r.textColor}25`}}>{r.label}</span>))}
+            </div>
+            <div style={{display:"flex",gap:"8px",flexWrap:"wrap",fontSize:"8px",alignItems:"center"}}>
+              <span style={{color:"#64748b",fontWeight:700,marginRight:"2px"}}>SCORE BAND:</span>
+              {Object.entries(SCORE_COLORS).map(([l,c])=>(<span key={l} style={{display:"flex",alignItems:"center",gap:"3px"}}><span style={{width:"14px",height:"10px",background:SCORE_BG[l],borderRadius:"2px",display:"inline-block",border:`1px solid ${c}40`}}/><span style={{color:c,fontWeight:600}}>Score ({l})</span></span>))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewTab==="list"&&(
+        <div style={{padding:"10px"}}>
+          {sheets.map((sh,i)=><SheetEditor key={sh.id} sheet={sh} index={i} onUpdate={updateSheet} onDelete={deleteSheet} regNames={regNames}
+            defaultExpanded={editIdx===i} onMount={editIdx===i?()=>{setTimeout(()=>{const el=document.getElementById(`sheet-${sh.id}`);el?.scrollIntoView({behavior:"smooth",block:"center"})},100)}:null}/>)}
+        </div>
+      )}
+
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"linear-gradient(to top,#0a1120 70%,#0a112000)",padding:"16px 16px calc(env(safe-area-inset-bottom) + 12px)",display:"flex",gap:"10px",alignItems:"center"}}>
+        <button onClick={()=>{if(confirm("Save this chart and start fresh?")){archiveAndReset()}}} style={{background:"transparent",border:"1px solid #f8717120",color:"#f87171",padding:"12px 14px",fontSize:"11px",borderRadius:"10px",fontWeight:600,cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit"}}>Reset</button>
+        {sheets.some(s=>s.imageUrl)&&(
+          <button className="btn-action btn-primary" onClick={handlePrintScans} style={{width:"auto",padding:"12px 16px",fontSize:"11px"}}>
+            Scans ({sheets.filter(s=>s.imageUrl).length})
+          </button>
+        )}
+        <button onClick={handleExport} disabled={!validCount} style={{flex:1,background:validCount?"linear-gradient(135deg,#4ade80,#22c55e)":"#1e293b",border:"none",color:validCount?"#080d13":"#475569",padding:"16px",fontSize:"15px",borderRadius:"12px",fontWeight:700,opacity:validCount?1:0.5,cursor:validCount?"pointer":"default",transition:"all 0.2s cubic-bezier(0.34,1.56,0.64,1)",fontFamily:"inherit",boxShadow:validCount?"0 4px 20px rgba(74,222,128,0.2)":"none"}}>
+          Print Chart ({validCount})
+        </button>
+      </div>
+
+      {/* Cell Popup */}
+      {popupCell&&(()=>{
+        const seatLabel=popupCell.sec?`${popupCell.sec}${popupCell.row}-${popupCell.seat}`:"";
+        const sh=popupCell.idx!==null?sheets[popupCell.idx]:null;
+        // Find left/right neighbors
+        let leftName="",rightName="",leftIdx=null,rightIdx=null;
+        if(popupCell.sec&&popupCell.seat){
+          const secData=mapData[popupCell.sec];
+          if(secData){
+            const leftCell=secData.cells[`${popupCell.row}-${popupCell.seat-1}`];
+            const rightCell=secData.cells[`${popupCell.row}-${popupCell.seat+1}`];
+            if(leftCell){leftName=leftCell.name;leftIdx=leftCell.idx;}
+            if(rightCell){rightName=rightCell.name;rightIdx=rightCell.idx;}
+          }
+        }
+        const hasGroup=!!(sh?.groupId);
+        const handleLink=(idx,dir)=>{
+          const neighborIdx=dir==="left"?leftIdx:rightIdx;
+          if(neighborIdx===null)return;
+          const gid=sheets[neighborIdx]?.groupId||sheets[idx]?.groupId||makeGroupId();
+          const n=[...sheets];
+          n[idx]={...n[idx],groupId:gid};
+          n[neighborIdx]={...n[neighborIdx],groupId:gid};
+          save(n);
+        };
+        const handleUnlink=(idx)=>{
+          const gid=sheets[idx]?.groupId;if(!gid)return;
+          const n=[...sheets];
+          // Count how many share this group
+          const members=n.filter(s=>s.groupId===gid);
+          if(members.length<=2){members.forEach(m=>{const mi=n.indexOf(m);n[mi]={...n[mi],groupId:""};})}
+          else{n[idx]={...n[idx],groupId:""};}
+          save(n);
+        };
+        return <CellPopup
+          seatLabel={seatLabel||sh?.seatCode||"Unassigned"}
+          sheet={sh} index={popupCell.idx}
+          onUpdate={(i,f,v)=>{updateSheet(i,f,v)}}
+          onDelete={(i)=>{deleteSheet(i);closePopup()}}
+          onClose={closePopup}
+          onLink={handleLink} onUnlink={handleUnlink}
+          regNames={regNames} allSheets={sheets}
+          leftName={leftName} rightName={rightName} hasGroup={hasGroup}/>;
+      })()}
+
+      {/* PDF Preview Overlay */}
+      {pdfPreview&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:1000,display:"flex",flexDirection:"column",animation:"fadeIn 0.2s ease-out"}}>
+          <div style={{display:"flex",gap:"12px",justifyContent:"center",alignItems:"center",padding:"14px 16px",background:"linear-gradient(180deg,#0e1628,#0a1120)",borderBottom:"1px solid #1e3a5f20"}}>
+            <button onClick={()=>{const iframe=document.getElementById("pdf-frame");if(iframe)iframe.contentWindow.print();}} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"14px 36px",fontSize:"15px",borderRadius:"12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 20px rgba(74,222,128,0.25)",transition:"all 0.2s cubic-bezier(0.34,1.56,0.64,1)"}}>Print</button>
+            <button onClick={()=>{URL.revokeObjectURL(pdfPreview);setPdfPreview(null);}} style={{background:"transparent",border:"1px solid #47556925",color:"#94a3b8",padding:"14px 24px",fontSize:"14px",borderRadius:"12px",fontWeight:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>Close</button>
+          </div>
+          <iframe id="pdf-frame" src={pdfPreview} style={{flex:1,border:"none",width:"100%"}}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(ErrorBoundary,null,React.createElement(App)));
+</script>
+</body>
+</html>
