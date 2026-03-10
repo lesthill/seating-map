@@ -608,7 +608,7 @@ function NameInput({value,onChange,regNames,placeholder}){
 // ══════════════════════════════════════
 // CELL POPUP — animated inline editor for any seat
 // ══════════════════════════════════════
-function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnlink,onAddNew,regNames,allSheets,leftName,rightName,hasGroup}){
+function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnlink,onAddNew,regNames,allSheets,leftName,rightName,leftLinked,rightLinked}){
   const isNew=!sheet;
   const[assignSearch,setAssignSearch]=useState("");
   const[touched,setTouched]=useState(false);
@@ -669,26 +669,22 @@ function CellPopup({seatLabel,sheet,index,onUpdate,onDelete,onClose,onLink,onUnl
         ):(
           <div style={{padding:"8px 18px 14px"}}>
             {sheet.imageUrl&&<div style={{marginBottom:"8px",borderRadius:"10px",overflow:"hidden",maxHeight:"100px",border:"1px solid #1e3a5f20"}}><img src={sheet.imageUrl} style={{width:"100%",objectFit:"contain"}}/></div>}
-            {/* ── NAME CENTERPIECE with neighbor arrows ── */}
-            <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px"}}>
-              {leftName?(
-                hasGroup&&sheet.groupId?(
-                  <button onClick={()=>{onUnlink(index);}} style={{flex:"none",background:"#f59e0b18",border:"1px solid #f59e0b30",color:"#f59e0b",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>← {leftName}</button>
-                ):(
-                  <button onClick={()=>{onLink(index,"left");}} style={{flex:"none",background:"#0f1520",border:"1px dashed #47556940",color:"#475569",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>← {leftName}</button>
-                )
-              ):(<div style={{width:"36px"}}/>)}
-              <div style={{flex:1,textAlign:"center"}}>
-                <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/>
-              </div>
-              {rightName?(
-                hasGroup&&sheet.groupId?(
-                  <button onClick={()=>{onUnlink(index);}} style={{flex:"none",background:"#f59e0b18",border:"1px solid #f59e0b30",color:"#f59e0b",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>{rightName} →</button>
-                ):(
-                  <button onClick={()=>{onLink(index,"right");}} style={{flex:"none",background:"#0f1520",border:"1px dashed #47556940",color:"#475569",padding:"6px 8px",borderRadius:"8px",fontSize:"9px",fontWeight:600,cursor:"pointer",maxWidth:"70px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontFamily:"inherit"}}>{rightName} →</button>
-                )
-              ):(<div style={{width:"36px"}}/>)}
+            {/* ── NAME CENTERPIECE ── */}
+            <div style={{marginBottom:"4px"}}>
+              <NameInput value={sheet.firstName} onChange={v=>wrappedUpdate(index,"firstName",v)} regNames={regNames} placeholder="Name"/>
             </div>
+            {/* ── WITH neighbors — independent left/right ── */}
+            {(leftName||rightName)&&(
+            <div style={{display:"flex",gap:"6px",marginBottom:"6px",alignItems:"center"}}>
+              {leftName?(
+                <button onClick={()=>{leftLinked?onUnlink(index,"left"):onLink(index,"left")}} style={{flex:1,background:leftLinked?"#f59e0b18":"#0f1520",border:leftLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:leftLinked?"#f59e0b":"#64748b",padding:"8px 6px",borderRadius:"8px",fontSize:"10px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {leftLinked?"← "+leftName+" ✓":"← "+leftName}</button>
+              ):(<div style={{flex:1}}/>)}
+              {rightName?(
+                <button onClick={()=>{rightLinked?onUnlink(index,"right"):onLink(index,"right")}} style={{flex:1,background:rightLinked?"#f59e0b18":"#0f1520",border:rightLinked?"1px solid #f59e0b40":"1px dashed #47556930",color:rightLinked?"#f59e0b":"#64748b",padding:"8px 6px",borderRadius:"8px",fontSize:"10px",fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {rightLinked?rightName+" → ✓":rightName+" →"}</button>
+              ):(<div style={{flex:1}}/>)}
+            </div>)}
             {/* ── SEAT ── */}
             <div style={{marginBottom:"8px"}}>
               <input value={sheet.seatCode} onChange={e=>wrappedUpdate(index,"seatCode",e.target.value.toUpperCase())} placeholder="B1-5" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px 10px",fontSize:"14px",fontWeight:700,borderRadius:"8px",textAlign:"center",letterSpacing:"1px"}}/></div>
@@ -1609,7 +1605,8 @@ function App(){
             if(rightCell){rightName=rightCell.name;rightIdx=rightCell.idx;}
           }
         }
-        const hasGroup=!!(sh?.groupId);
+        const leftLinked=!!(sh?.groupId&&leftIdx!==null&&sheets[leftIdx]?.groupId===sh.groupId);
+        const rightLinked=!!(sh?.groupId&&rightIdx!==null&&sheets[rightIdx]?.groupId===sh.groupId);
         const handleLink=(idx,dir)=>{
           const neighborIdx=dir==="left"?leftIdx:rightIdx;
           if(neighborIdx===null)return;
@@ -1619,13 +1616,35 @@ function App(){
           n[neighborIdx]={...n[neighborIdx],groupId:gid};
           save(n);
         };
-        const handleUnlink=(idx)=>{
-          const gid=sheets[idx]?.groupId;if(!gid)return;
+        const handleUnlink=(idx,dir)=>{
+          const neighborIdx=dir==="left"?leftIdx:rightIdx;
+          if(neighborIdx===null)return;
           const n=[...sheets];
-          // Count how many share this group
-          const members=n.filter(s=>s.groupId===gid);
-          if(members.length<=2){members.forEach(m=>{const mi=n.indexOf(m);n[mi]={...n[mi],groupId:""};})}
-          else{n[idx]={...n[idx],groupId:""};}
+          const oldGid=n[idx].groupId;if(!oldGid)return;
+          const newGid=makeGroupId();
+          if(dir==="left"){
+            const leftMembers=[neighborIdx];
+            if(popupCell.sec&&popupCell.seat){
+              const secData=mapData[popupCell.sec];
+              if(secData){for(let s=popupCell.seat-2;s>=1;s--){
+                const c=secData.cells[`${popupCell.row}-${s}`];
+                if(c&&sheets[c.idx]?.groupId===oldGid)leftMembers.push(c.idx);else break;
+              }}}
+            if(leftMembers.length===1)n[neighborIdx]={...n[neighborIdx],groupId:""};
+            else leftMembers.forEach(mi=>{n[mi]={...n[mi],groupId:newGid}});
+          }else{
+            const rightMembers=[neighborIdx];
+            if(popupCell.sec&&popupCell.seat){
+              const secData=mapData[popupCell.sec];
+              if(secData){const maxS=secData.maxSeat||10;for(let s=popupCell.seat+2;s<=maxS;s++){
+                const c=secData.cells[`${popupCell.row}-${s}`];
+                if(c&&sheets[c.idx]?.groupId===oldGid)rightMembers.push(c.idx);else break;
+              }}}
+            if(rightMembers.length===1)n[neighborIdx]={...n[neighborIdx],groupId:""};
+            else rightMembers.forEach(mi=>{n[mi]={...n[mi],groupId:newGid}});
+          }
+          const remaining=n.filter(s=>s.groupId===oldGid);
+          if(remaining.length<=1)remaining.forEach(m=>{const mi=n.indexOf(m);n[mi]={...n[mi],groupId:""};});
           save(n);
         };
         const handleAddNew=(seatCode,name)=>{
@@ -1643,7 +1662,7 @@ function App(){
           onAddNew={handleAddNew}
           onLink={handleLink} onUnlink={handleUnlink}
           regNames={regNames} allSheets={sheets}
-          leftName={leftName} rightName={rightName} hasGroup={hasGroup}/>;
+          leftName={leftName} rightName={rightName} leftLinked={leftLinked} rightLinked={rightLinked}/>;
       })()}
 
       {/* PDF Preview Overlay */}
