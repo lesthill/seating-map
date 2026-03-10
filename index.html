@@ -949,7 +949,7 @@ function generatePDF(sheets,eventInfo){
         }
 
       }
-      // Draw group connector — diagonal line spanning grouped cells
+      // Draw group connector — small horizontal bar on shared cell border
       const seen=new Set();
       for(let gs=1;gs<=nS;gs++){
         const gc=secCells[sec]?.[`${r}-${gs}`];
@@ -957,11 +957,11 @@ function generatePDF(sheets,eventInfo){
           seen.add(gc.groupId);let ge=gs;
           for(let gs2=gs+1;gs2<=nS;gs2++){const gc2=secCells[sec]?.[`${r}-${gs2}`];if(gc2?.groupId===gc.groupId)ge=gs2;else break;}
           if(ge>gs){
-            const lx1=x+rowW+(gs-1)*cW+2;
-            const lx2=x+rowW+ge*cW-2;
-            const ly1=ry+cH-2;
-            const ly2=ry+2;
-            doc.setDrawColor(50,80,180);doc.setLineWidth(1.2);doc.line(lx1,ly1,lx2,ly2);
+            for(let si=gs;si<ge;si++){
+              const bx=x+rowW+si*cW;
+              const by=ry+cH/2-1;
+              doc.setFillColor(50,80,180);doc.rect(bx-5,by,10,2,"F");
+            }
           }
         }
       }
@@ -1480,13 +1480,15 @@ function App(){
                         </div>
                       </div>);
                     })}
-                    {/* Group connector — diagonal line */}
+                    {/* Group connector — small horizontal bar on shared cell border */}
                     {groupSpans.map(g=>{
                       const cw=67;
-                      const left=(g.start-1)*cw+18;
-                      const width=(g.end-g.start+1)*cw;
-                      const rowH=58;
-                      return(<svg key={g.gid} style={{position:"absolute",left,top:0,width,height:rowH,pointerEvents:"none",zIndex:5,opacity:0.7}}><line x1="4" y1={rowH-4} x2={width-4} y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round"/></svg>);
+                      const lines=[];
+                      for(let s=g.start;s<g.end;s++){
+                        const cx=(s)*cw+18;
+                        lines.push(<div key={`${g.gid}-${s}`} style={{position:"absolute",left:cx-12,top:"50%",width:24,height:"4px",background:"#3b82f6",borderRadius:"2px",transform:"translateY(-50%)",pointerEvents:"none",zIndex:5,opacity:0.85}}/>);
+                      }
+                      return lines;
                     })}
                   </div>);})}
                 </div>
