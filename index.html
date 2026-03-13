@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b64-0313";
+const BUILD="b65-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -924,7 +924,7 @@ async function exportImagesPDF(sheets,onReady){
 function generatePDF(sheets,eventInfo){
   const evt=eventInfo||{location:"",date:"",code:""};
   const entries=[];sheets.forEach(sh=>{const p=parseSeatCode(sh.seatCode);if(!p||!sh.firstName)return;
-    entries.push({sec:p.sec,row:p.row,seat:p.seat,name:sh.firstName,score:scoreToLetter(sh.score),rrStatus:sh.rrStatus||"",rrDetail:sh.rrDetail||"",groupId:sh.groupId||""});
+    entries.push({sec:p.sec,row:p.row,seat:p.seat,name:(sh.firstName||"").split(/\s+/)[0],score:scoreToLetter(sh.score),rrStatus:sh.rrStatus||"",rrDetail:sh.rrDetail||"",groupId:sh.groupId||""});
   });if(!entries.length)return null;
 
   const secRows={},secSeats={},secCells={};
