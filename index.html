@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b63-0313";
+const BUILD="b64-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -953,7 +953,7 @@ function generatePDF(sheets,eventInfo){
   // ── Smart layout: figure out how many sections fit per row ──
   // Try all sections on one row first, then 2 rows, etc.
   const maxR=Math.max(...sections.map(s=>secRows[s]));
-  const MIN_CW=50,MIN_CH=38; // minimum readable cell sizes
+  const MIN_CW=32,MIN_CH=26; // minimum readable cell sizes — allows 20+ cols on one row
   let secsPerRow=sections.length;
   let numRowBands=1;
   // Keep reducing sections per row until cells are big enough
@@ -992,11 +992,11 @@ function generatePDF(sheets,eventInfo){
   cH=Math.max(28,Math.min(64,cH));
 
   // Font sizes proportional to cell
-  const fName=Math.max(6,Math.min(10,cW*0.13,cH*0.17));
-  const fScore=Math.max(5,fName*0.78);
-  const fRR=Math.max(4.5,fName*0.72);
-  const fDetail=Math.max(4,fName*0.65);
-  const fColRow=Math.max(5.5,Math.min(8,cW*0.1));
+  const fName=Math.max(5,Math.min(10,cW*0.15,cH*0.17));
+  const fScore=Math.max(4,fName*0.75);
+  const fRR=Math.max(4,fName*0.7);
+  const fDetail=Math.max(3.5,fName*0.6);
+  const fColRow=Math.max(5,Math.min(8,cW*0.12));
 
   // ── Event header ──
   let yStart=M;
@@ -1536,11 +1536,22 @@ function App(){
     save([]);setPhase("start");
   },[sheets,history,eventInfo,save]);
   const restoreFromHistory=useCallback((entry)=>{
-    // Fuzzy-match names against loaded reg names
+    // Match chart first names to registration full names — conservative: only when first name clearly matches
     const restored=entry.sheets.map(s=>{
       if(s.firstName&&regNames.length){
-        const m=fuzzyMatch(s.firstName,regNames,1);
-        if(m.length)return{...s,firstName:m[0]};
+        const fn=s.firstName.toLowerCase().trim();
+        // Exact full match
+        const exact=regNames.find(r=>r.toLowerCase()===fn);
+        if(exact)return{...s,firstName:exact};
+        // First name matches first word of a reg name (e.g. "Sergio" → "Sergio Bustamante")
+        const firstWord=fn.split(/\s+/)[0];
+        if(firstWord.length>=3){
+          const match=regNames.find(r=>{
+            const rFirst=r.toLowerCase().split(/\s+/)[0];
+            return rFirst===firstWord||firstWord===rFirst;
+          });
+          if(match)return{...s,firstName:match};
+        }
       }
       return s;
     });
