@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b57-0313";
+const BUILD="b58-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
@@ -1331,31 +1331,39 @@ function App(){
       const ev=localStorage?.getItem(EK);if(ev)setEventInfo(JSON.parse(ev));
       const h=localStorage?.getItem(HK);if(h)setHistory(JSON.parse(h));
     }catch(e){}setLoading(false);
-    // Check for ?load=fix to add corrected sheet data as a history entry
-    const params=new URLSearchParams(window.location.search);
-    if(params.get("load")==="fix"){
-      fetch(PROXY_URL.replace(/\/?$/,"")+"/sheets",{headers:{"Bypass-Tunnel-Reminder":"true"}})
-        .then(r=>r.json()).then(fixedSheets=>{
-          if(!fixedSheets||!fixedSheets.length)return;
-          const existing=localStorage?.getItem(HK);
-          const hist=existing?JSON.parse(existing):[];
-          // Don't add duplicate if already there
-          if(hist.some(h=>h.id==="fix-session"))return;
-          const entry={
-            id:"fix-session",
-            date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}),
-            event:{location:"Corrected Scans",date:"Mar 13, 2026",code:""},
-            count:fixedSheets.length,
-            seated:fixedSheets.filter(s=>s.seatCode&&s.firstName).length,
-            sheets:fixedSheets
-          };
-          const updated=[entry,...hist].slice(0,20);
-          try{localStorage?.setItem(HK,JSON.stringify(updated))}catch(e){}
-          setHistory(updated);
-          // Remove ?load=fix from URL
-          window.history.replaceState({},"",window.location.pathname);
-        }).catch(e=>console.error("Load fix failed:",e));
-    }
+    // Add corrected scan data as a history entry (embedded, no proxy needed)
+    const FIXED_SHEETS=[
+      {id:"fix-1",seatCode:"C1-4",score:"3",firstName:"Mark Craig",rrStatus:"",rrDetail:""},
+      {id:"fix-2",seatCode:"C1-5",score:"1",firstName:"Emily Hunt",rrStatus:"",rrDetail:""},
+      {id:"fix-3",seatCode:"C1-6",score:"2",firstName:"Robert Thompson",rrStatus:"",rrDetail:""},
+      {id:"fix-4",seatCode:"B1-5",score:"2",firstName:"Cash Barkley",rrStatus:"",rrDetail:""},
+      {id:"fix-5",seatCode:"A3-7",score:"2",firstName:"Sergio Bustamante",rrStatus:"",rrDetail:""},
+      {id:"fix-6",seatCode:"A6-6",score:"1",firstName:"Harold Franklin",rrStatus:"",rrDetail:""},
+      {id:"fix-7",seatCode:"A6-1",score:"3",firstName:"Reggie Pope",rrStatus:"",rrDetail:""},
+      {id:"fix-8",seatCode:"C1-3",score:"3",firstName:"Daniel Costre",rrStatus:"",rrDetail:""},
+      {id:"fix-9",seatCode:"B7-5",score:"3",firstName:"Lendria LaBorde",rrStatus:"",rrDetail:""},
+      {id:"fix-10",seatCode:"B7-3",score:"3",firstName:"John Salles",rrStatus:"",rrDetail:""},
+      {id:"fix-11",seatCode:"B7-4",score:"3",firstName:"Shona Moffes",rrStatus:"",rrDetail:""},
+      {id:"fix-12",seatCode:"B3-6",score:"3",firstName:"Emelim Nwaha",rrStatus:"",rrDetail:""},
+      {id:"fix-13",seatCode:"B3-5",score:"3",firstName:"Cindy Fletcher",rrStatus:"",rrDetail:""}
+    ];
+    try{
+      const existing=localStorage?.getItem(HK);
+      const hist=existing?JSON.parse(existing):[];
+      if(!hist.some(h=>h.id==="fix-session")){
+        const entry={
+          id:"fix-session",
+          date:"Mar 13, 2026, 11:00 AM",
+          event:{location:"Corrected Scans",date:"Mar 13, 2026",code:""},
+          count:FIXED_SHEETS.length,
+          seated:FIXED_SHEETS.length,
+          sheets:FIXED_SHEETS
+        };
+        const updated=[entry,...hist].slice(0,20);
+        try{localStorage?.setItem(HK,JSON.stringify(updated))}catch(e){}
+        setHistory(updated);
+      }
+    }catch(e){}
   },[]);
   // Splash intro sequence — step-driven for reliability
   useEffect(()=>{
