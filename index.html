@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b59-0313";
+const BUILD="b60-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
@@ -429,17 +429,17 @@ function Scanner({onScanConfirm,onDone,captureCount,regNames}){
     c.width=sw;c.height=sh;
     c.getContext("2d").drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
     setFlash(true);setTimeout(()=>setFlash(false),200);
-    const dataUrl=c.toDataURL("image/jpeg",0.85);
+    const dataUrl=c.toDataURL("image/jpeg",0.95);
     setCapturedImg(dataUrl);
     setSeatGuess("");setNameSearch("");setSelectedName("");setScoreVal("");
     setStatus("confirm");
     setOcrRunning(true);
 
-    // Send full image to proxy — single call, better prompt handles seat code
+    // Send full image + reg names to proxy for OCR
     try{
       const resp=await fetch(PROXY_URL,{
         method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
-        body:JSON.stringify({image:dataUrl}),signal:AbortSignal.timeout(10000)
+        body:JSON.stringify({image:dataUrl,names:regNames.slice(0,100)}),signal:AbortSignal.timeout(15000)
       }).then(r=>r.json()).catch(()=>({}));
       if(resp.seatCode){
         setSeatGuess(prev=>{
