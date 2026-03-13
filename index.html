@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b68-0313";
+const BUILD="b69-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -1324,8 +1324,7 @@ function App(){
   useEffect(()=>{
     try{
       const v=localStorage?.getItem(SK);
-      if(v){const d=JSON.parse(v).map(s=>({...s,score:"",rrStatus:"",rrDetail:""}));if(d.length){setSheets(d);
-        try{const lite=d.map(({imageUrl,...rest})=>rest);localStorage?.setItem(SK,JSON.stringify(lite))}catch(e){}
+      if(v){const d=JSON.parse(v);if(d.length){setSheets(d);
         const hasSeatCodes=d.some(s=>s.seatCode);
         setPhase(hasSeatCodes?"review":"start");
       }}
@@ -1789,25 +1788,44 @@ function App(){
     }
     if(rrIdx<0)rrIdx=7; // last resort default
 
-    const newSheets=allRows.map((row,i)=>{
-      // Try to get the best name: col0 often has full name, or combine first+last
+    // Merge RR data into existing sheets by name matching
+    const updated=[...sheets];
+    let matched=0,unmatched=0;
+    allRows.forEach((row,i)=>{
       let full="";
       if(lastIdx>=0){
         const first=(row[nameIdx]||"").trim();const last=(row[lastIdx]||"").trim();
         full=last?`${first} ${last}`.trim():first;
       }else{
         full=(row[nameIdx]||"").trim();
-        // If col0 looks like a full name (has space), use it; otherwise try col0
         if(!full.includes(" ")&&row[1]&&row[2]){
           full=`${(row[1]||"").trim()} ${(row[2]||"").trim()}`.trim();
         }
       }
-      if(!full)return null;
+      if(!full)return;
       const rrRaw=(row[rrIdx]||"").trim();const parsed=parseRRNotes(rrRaw);
-      return{id:`imp-${Date.now()}-${i}`,seatCode:"",score:"",firstName:full,rrStatus:parsed.rrStatus,rrDetail:parsed.rrDetail,imageUrl:null};
-    }).filter(Boolean);
-    const merged=[...sheets,...newSheets];save(merged);
-    // Stay on start — don't jump to review yet
+      if(!parsed.rrStatus&&!parsed.rrDetail)return;
+      // Find matching person in existing sheets
+      const fl=full.toLowerCase();const fFirst=fl.split(/\s+/)[0];
+      let idx=updated.findIndex(s=>{
+        const sl=(s.firstName||"").toLowerCase();
+        return sl===fl||sl.split(/\s+/)[0]===fFirst;
+      });
+      if(idx<0){
+        // Try fuzzy
+        const fm=fuzzyMatch(full,updated.map(s=>s.firstName).filter(Boolean),1);
+        if(fm.length)idx=updated.findIndex(s=>s.firstName===fm[0]);
+      }
+      if(idx>=0){
+        updated[idx]={...updated[idx],rrStatus:parsed.rrStatus,rrDetail:parsed.rrDetail};
+        matched++;
+      }else{
+        // Add as new unplaced entry
+        updated.push({id:`rr-${Date.now()}-${i}`,seatCode:"",score:"",firstName:full,rrStatus:parsed.rrStatus,rrDetail:parsed.rrDetail});
+        unmatched++;
+      }
+    });
+    save(updated);
   },[sheets,save]);
 
   const validCount=sheets.filter(sh=>parseSeatCode(sh.seatCode)&&sh.firstName).length;
@@ -2049,7 +2067,7 @@ function App(){
                 <div style={{color:"#ea580c",fontSize:"10px",fontWeight:600,letterSpacing:"1px",marginBottom:"6px"}}>RR DATA</div>
                 <textarea placeholder="Paste RR spreadsheet here..." rows={4}
                   style={{width:"100%",background:"#080d13",border:"1px solid #ea580c20",color:"#ea580c",padding:"10px",fontSize:"12px",borderRadius:"8px",resize:"vertical",fontFamily:"inherit"}}
-                  onPaste={e=>{const t=e.clipboardData.getData("text");if(t){e.preventDefault();handlePasteRR(t);setShowSettings(false)}}}/>
+                  onPaste={e=>{const t=e.clipboardData.getData("text");if(t){e.preventDefault();handlePasteRR(t)}}}/>
                 <div style={{color:"#47556980",fontSize:"9px",marginTop:"4px"}}>Paste to merge RR status into existing sheets</div>
               </div>
               {/* Event Info */}
