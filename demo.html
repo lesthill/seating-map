@@ -262,9 +262,10 @@ async function processImage(imageDataUrl,regNames){
       const m=seatCode.match(/([A-Z])(\d+)[-.]?(\d)/);
       if(m)seatCode=`${m[1]}${m[2]}-${m[3]}`;
     }
-    // Fix OCR misreads: seat 0 → 1 (no seat 0 exists)
+    // Fix OCR misreads
     if(seatCode){
-      const sm=seatCode.match(/^([A-Z])(\d+)-(\d+)$/);
+      seatCode=seatCode.replace(/^E/,"B").replace(/^M/,"C").replace(/^[^A-D]/,m=>({F:"B",G:"C",H:"D",I:"D",O:"D"}[m]||"B"));
+      const sm=seatCode.match(/^([A-D])(\d+)-(\d+)$/);
       if(sm){
         let seat=parseInt(sm[3],10);
         if(seat===0)seat=1;
