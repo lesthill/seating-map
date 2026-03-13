@@ -357,12 +357,8 @@ function Scanner({onCapture,onDone,captureCount}){
     const vw=v.videoWidth,vh=v.videoHeight;
     const sx=Math.round(VF_LEFT*vw),sy=Math.round(VF_TOP*vh);
     const sw=Math.round(VF_WIDTH*vw),sh=Math.round(VF_HEIGHT*vh);
-    const tmp=document.createElement("canvas");tmp.width=sw;tmp.height=sh;
-    const tctx=tmp.getContext("2d");
-    tctx.drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
-    const bounds=findPaperBounds(tctx,sw,sh);
-    if(bounds){c.width=bounds.w;c.height=bounds.h;c.getContext("2d").drawImage(tmp,bounds.x,bounds.y,bounds.w,bounds.h,0,0,bounds.w,bounds.h);}
-    else{c.width=sw;c.height=sh;c.getContext("2d").drawImage(tmp,0,0);}
+    c.width=sw;c.height=sh;
+    c.getContext("2d").drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
     setFlash(true);setTimeout(()=>setFlash(false),200);
     setStatus("captured");
     const dataUrl=c.toDataURL("image/jpeg",0.85);
