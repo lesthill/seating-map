@@ -78,6 +78,7 @@
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
@@ -192,47 +193,162 @@ function bestNameMatch(ocrText,names){
   return bestScore>=30?best:"";
 }
 
-// ── Vision API OCR via local proxy ──
+// ── OCR: Local Tesseract.js (primary) + API proxy (fallback) ──
 const PROXY_URL="https://issn-plc-referred-objective.trycloudflare.com";
+let tesseractWorker=null;
+
+async function getTesseractWorker(){
+  if(tesseractWorker)return tesseractWorker;
+  tesseractWorker=await Tesseract.createWorker("eng");
+  return tesseractWorker;
+}
+
+// Crop a region from a data URL and return a preprocessed (high-contrast B&W) canvas
+function cropAndPreprocess(imageDataUrl,xPct,yPct,wPct,hPct){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      const sx=Math.round(img.width*xPct),sy=Math.round(img.height*yPct);
+      const sw=Math.round(img.width*wPct),sh=Math.round(img.height*hPct);
+      const c=document.createElement("canvas");
+      // Scale up for better OCR (Tesseract likes ~300dpi equivalent)
+      const scale=Math.max(2,Math.round(600/sw));
+      c.width=sw*scale;c.height=sh*scale;
+      const ctx=c.getContext("2d");
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+      // Convert to high-contrast B&W
+      const id=ctx.getImageData(0,0,c.width,c.height);
+      const d=id.data;
+      for(let i=0;i<d.length;i+=4){
+        const gray=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;
+        const bw=gray>140?255:0; // threshold
+        d[i]=bw;d[i+1]=bw;d[i+2]=bw;
+      }
+      ctx.putImageData(id,0,0);
+      resolve(c);
+    };
+    img.src=imageDataUrl;
+  });
+}
+
+// Extract seat code from top-right corner using Tesseract
+async function ocrSeatCode(imageDataUrl){
+  try{
+    // Crop top-right ~35% width, top ~12% height (where seat code is handwritten)
+    const canvas=await cropAndPreprocess(imageDataUrl,0.55,0,0.45,0.12);
+    const worker=await getTesseractWorker();
+    await worker.setParameters({tessedit_char_whitelist:"ABCDabcd0123456789-"});
+    const{data}=await worker.recognize(canvas);
+    const raw=data.text.trim().toUpperCase().replace(/\s+/g,"");
+    console.log("[OCR] Seat code raw:",JSON.stringify(raw),"from:",JSON.stringify(data.text));
+    // Try to extract L-D-D pattern
+    // Common OCR fixes: 0→O→D, S→5, I→1, Z→2, O→0→D
+    let cleaned=raw.replace(/O/g,"0").replace(/S/g,"5").replace(/I/g,"1").replace(/Z/g,"2");
+    const m=cleaned.match(/([A-D])-?(\d)-?(\d)/);
+    if(m){
+      let digit1=parseInt(m[2]);let digit2=parseInt(m[3]);
+      if(digit1===0)digit1=1;if(digit2===0)digit2=1;
+      return `${m[1]}${digit1}-${digit2}`;
+    }
+    // Try looser match — letter anywhere followed by two digits
+    const m2=cleaned.match(/([A-D]).*?(\d).*?(\d)/);
+    if(m2){
+      let d1=parseInt(m2[2]);let d2=parseInt(m2[3]);
+      if(d1===0)d1=1;if(d2===0)d2=1;
+      return `${m2[1]}${d1}-${d2}`;
+    }
+    return "";
+  }catch(e){console.error("[OCR] Seat code error:",e);return "";}
+}
+
+// Extract name from the Name: line area using Tesseract
+async function ocrName(imageDataUrl){
+  try{
+    // Crop left ~60% width, ~8-16% from top (Name: line in STUDENT section)
+    const canvas=await cropAndPreprocess(imageDataUrl,0.02,0.08,0.55,0.08);
+    const worker=await getTesseractWorker();
+    await worker.setParameters({tessedit_char_whitelist:""});// reset to full charset
+    const{data}=await worker.recognize(canvas);
+    const raw=data.text.trim();
+    console.log("[OCR] Name raw:",JSON.stringify(raw));
+    // Look for text after "Name:" on the line
+    const nameMatch=raw.match(/Name[:\s]*([A-Za-z][\w\s.'-]*)/i);
+    if(nameMatch)return nameMatch[1].trim();
+    // If no "Name:" prefix found, return any text that looks like a name
+    const words=raw.replace(/[^A-Za-z\s'-]/g,"").trim();
+    if(words.length>1&&words.length<60)return words;
+    return "";
+  }catch(e){console.error("[OCR] Name error:",e);return "";}
+}
+
+// Extract score (circled number on 1-10+ scale)
+async function ocrScore(imageDataUrl){
+  try{
+    // Crop the GOALS section — roughly 18-25% from top, left 70%
+    const canvas=await cropAndPreprocess(imageDataUrl,0.05,0.18,0.7,0.07);
+    const worker=await getTesseractWorker();
+    await worker.setParameters({tessedit_char_whitelist:"0123456789+"});
+    const{data}=await worker.recognize(canvas);
+    // This is hard to do with Tesseract — circled numbers are tough
+    // Return empty, let user fill in manually
+    return "";
+  }catch(e){return "";}
+}
 
 async function processImage(imageDataUrl,regNames){
   try{
-    const resp=await fetch(PROXY_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
-      body:JSON.stringify({image:imageDataUrl}),
-    });
-    const data=await resp.json();
-    if(data.error)throw new Error(data.error);
-    // Fuzzy match the extracted name against known names
-    let name=data.firstName||"";
-    const last=data.lastName||"";
-    const fullOCR=last?`${name} ${last}`.trim():name;
-    if(fullOCR&&regNames.length>0){
-      const matched=bestNameMatch(fullOCR,regNames);
-      if(matched)name=matched; else name=fullOCR;
-    }else{name=fullOCR;}
-    // Format seat code
-    let seatCode=data.seatCode||"";
-    seatCode=seatCode.toUpperCase().replace(/\s/g,"");
-    if(seatCode&&!seatCode.includes("-")){
-      const m=seatCode.match(/([A-Z])(\d+)[-.]?(\d)/);
-      if(m)seatCode=`${m[1]}${m[2]}-${m[3]}`;
+    // Try local Tesseract OCR first
+    const[seatCode,ocrNameResult]=await Promise.all([
+      ocrSeatCode(imageDataUrl),
+      ocrName(imageDataUrl)
+    ]);
+
+    let name=ocrNameResult;
+    if(name&&regNames.length>0){
+      const matched=bestNameMatch(name,regNames);
+      if(matched)name=matched;
     }
-    // Fix OCR misreads
+
+    console.log("[OCR] Local result — seat:",seatCode,"name:",name);
+
+    // If local OCR got a seat code, use it
     if(seatCode){
-      // Section letter is only A-D; fix common misreads
-      seatCode=seatCode.replace(/^E/,"B").replace(/^M/,"C").replace(/^[^A-D]/,m=>({F:"B",G:"C",H:"D",I:"D",O:"D"}[m]||"B"));
-      const sm=seatCode.match(/^([A-D])(\d+)-(\d+)$/);
-      if(sm){
-        let seat=parseInt(sm[3],10);
-        if(seat===0)seat=1; // 0 is always a misread of 1
-        seatCode=`${sm[1]}${sm[2]}-${seat}`;
-      }
+      return{seatCode,firstName:name,score:"",isPrimary:true};
     }
-    return{seatCode,firstName:name,score:String(data.score||"").replace(/[^0-9]/g,""),isPrimary:data.isPrimary!==false};
+
+    // Fall back to API proxy if local OCR failed to get seat code
+    console.log("[OCR] Local failed, trying API proxy...");
+    try{
+      const resp=await fetch(PROXY_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
+        body:JSON.stringify({image:imageDataUrl}),
+        signal:AbortSignal.timeout(10000)
+      });
+      const data=await resp.json();
+      if(data.error)throw new Error(data.error);
+      let apiName=data.firstName||"";
+      const last=data.lastName||"";
+      const fullOCR=last?`${apiName} ${last}`.trim():apiName;
+      if(fullOCR&&regNames.length>0){
+        const matched=bestNameMatch(fullOCR,regNames);
+        if(matched)apiName=matched; else apiName=fullOCR;
+      }else{apiName=fullOCR;}
+      let sc=data.seatCode||"";
+      sc=sc.toUpperCase().replace(/\s/g,"");
+      if(sc){
+        sc=sc.replace(/^E/,"B").replace(/^M/,"C").replace(/^[^A-D]/,m=>({F:"B",G:"C",H:"D",I:"D",O:"D"}[m]||"B"));
+        const sm=sc.match(/^([A-D])(\d+)-(\d+)$/);
+        if(sm){let seat=parseInt(sm[3],10);if(seat===0)seat=1;sc=`${sm[1]}${sm[2]}-${seat}`;}
+      }
+      return{seatCode:sc,firstName:apiName||name,score:String(data.score||"").replace(/[^0-9]/g,""),isPrimary:data.isPrimary!==false};
+    }catch(proxyErr){
+      console.log("[OCR] Proxy also failed:",proxyErr.message);
+      // Return whatever local OCR got
+      return{seatCode,firstName:name,score:"",isPrimary:true};
+    }
   }catch(e){
-    console.error("Vision API error:",e);
+    console.error("OCR error:",e);
     return{seatCode:"",firstName:"",score:"",isPrimary:true};
   }
 }
@@ -275,13 +391,20 @@ function autoMapColumns(headers){
 }
 
 // ══════════════════════════════════════
-// MANUAL-CAPTURE SCANNER
+// SCAN + CONFIRM SCANNER
 // ══════════════════════════════════════
-function Scanner({onCapture,onDone,captureCount}){
+// Flow: capture → OCR seat code → show image + seat guess + name picker → confirm → next
+function Scanner({onScanConfirm,onDone,captureCount,regNames}){
   const videoRef=useRef(null);const canvasRef=useRef(null);const streamRef=useRef(null);
   const[flash,setFlash]=useState(false);const[status,setStatus]=useState("starting");const[error,setError]=useState(null);
+  // Confirm state
+  const[capturedImg,setCapturedImg]=useState(null);
+  const[seatGuess,setSeatGuess]=useState("");
+  const[nameSearch,setNameSearch]=useState("");
+  const[selectedName,setSelectedName]=useState("");
+  const[scoreVal,setScoreVal]=useState("");
+  const[ocrRunning,setOcrRunning]=useState(false);
 
-  // Viewfinder: tighter crop — 70% width, 8.5:11 landscape ratio
   const VF_WIDTH=0.70;
   const VF_HEIGHT=VF_WIDTH*(8.5/11);
   const VF_LEFT=(1-VF_WIDTH)/2;
@@ -294,51 +417,72 @@ function Scanner({onCapture,onDone,captureCount}){
     }catch(e){setError("Camera access denied. Check permissions.")}
   },[]);
 
-  // Find paper edges by scanning for brightness transitions
-  function findPaperBounds(ctx,w,h){
-    const data=ctx.getImageData(0,0,w,h).data;
-    const gray=(x,y)=>{const i=(y*w+x)*4;return data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114;};
-    const BRIGHT=140;const EDGE_SAMPLE=8;
-    let top=0,bottom=h-1,left=0,right=w-1;
-    for(let y=0;y<h*0.4;y++){
-      let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const x=Math.floor(w*0.2+w*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
-      if(bright>=EDGE_SAMPLE*0.6){top=y;break;}
-    }
-    for(let y=h-1;y>h*0.6;y--){
-      let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const x=Math.floor(w*0.2+w*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
-      if(bright>=EDGE_SAMPLE*0.6){bottom=y;break;}
-    }
-    for(let x=0;x<w*0.4;x++){
-      let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const y=Math.floor(h*0.2+h*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
-      if(bright>=EDGE_SAMPLE*0.6){left=x;break;}
-    }
-    for(let x=w-1;x>w*0.6;x--){
-      let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const y=Math.floor(h*0.2+h*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
-      if(bright>=EDGE_SAMPLE*0.6){right=x;break;}
-    }
-    const pad=Math.round(Math.min(w,h)*0.01);
-    top=Math.max(0,top-pad);left=Math.max(0,left-pad);
-    bottom=Math.min(h-1,bottom+pad);right=Math.min(w-1,right+pad);
-    const cropW=right-left,cropH=bottom-top;
-    if(cropW>w*0.3&&cropH>h*0.3)return{x:left,y:top,w:cropW,h:cropH};
-    return null;
-  }
-
-  const captureFrame=useCallback(()=>{
+  const captureFrame=useCallback(async()=>{
     if(!videoRef.current||!canvasRef.current||status!=="ready")return;
     const v=videoRef.current;const c=canvasRef.current;
     const vw=v.videoWidth,vh=v.videoHeight;
-    // Crop exactly to viewfinder area — no paper detection (it was clipping the seat code corner)
     const sx=Math.round(VF_LEFT*vw),sy=Math.round(VF_TOP*vh);
     const sw=Math.round(VF_WIDTH*vw),sh=Math.round(VF_HEIGHT*vh);
     c.width=sw;c.height=sh;
     c.getContext("2d").drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
     setFlash(true);setTimeout(()=>setFlash(false),200);
-    setStatus("captured");
     const dataUrl=c.toDataURL("image/jpeg",0.85);
-    onCapture(dataUrl);
-    setTimeout(()=>setStatus("ready"),800);
-  },[onCapture,status]);
+    setCapturedImg(dataUrl);
+    setSeatGuess("");setNameSearch("");setSelectedName("");setScoreVal("");
+    setStatus("confirm");
+    // Run OCR on seat code in background
+    setOcrRunning(true);
+    try{
+      const code=await ocrSeatCode(dataUrl);
+      setSeatGuess(code);
+    }catch(e){}
+    // Also try API proxy as backup
+    try{
+      const resp=await fetch(PROXY_URL,{
+        method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
+        body:JSON.stringify({image:dataUrl}),signal:AbortSignal.timeout(8000)
+      });
+      const data=await resp.json();
+      if(!data.error){
+        setSeatGuess(prev=>{
+          // Only override if we didn't get anything from local OCR
+          if(!prev&&data.seatCode){
+            let sc=data.seatCode.toUpperCase().replace(/\s/g,"");
+            const m=sc.match(/([A-D])-?(\d)-?(\d)/);
+            if(m){let s=parseInt(m[3]);if(s===0)s=1;return `${m[1]}${m[2]}-${s}`;}
+            return sc;
+          }
+          return prev;
+        });
+        if(data.firstName){
+          setSelectedName(prev=>prev||data.firstName);
+          setNameSearch(prev=>prev||data.firstName);
+        }
+        if(data.score)setScoreVal(prev=>prev||String(data.score));
+      }
+    }catch(e){}
+    setOcrRunning(false);
+  },[status]);
+
+  const handleConfirm=useCallback(()=>{
+    onScanConfirm({
+      seatCode:seatGuess,
+      firstName:selectedName||nameSearch,
+      score:scoreVal,
+      imageUrl:capturedImg,
+      isPrimary:true
+    });
+    setCapturedImg(null);setStatus("ready");
+  },[seatGuess,selectedName,nameSearch,scoreVal,capturedImg,onScanConfirm]);
+
+  const handleRetake=useCallback(()=>{
+    setCapturedImg(null);setStatus("ready");
+  },[]);
+
+  const nameSuggestions=useMemo(()=>{
+    if(!nameSearch||!regNames.length)return regNames.slice(0,8);
+    return fuzzyMatch(nameSearch,regNames,8);
+  },[nameSearch,regNames]);
 
   useEffect(()=>{startCam();return()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop())}},[]);
 
@@ -350,6 +494,63 @@ function Scanner({onCapture,onDone,captureCount}){
     </div>
   );
 
+  // ── CONFIRM SCREEN ──
+  if(status==="confirm"&&capturedImg)return(
+    <div style={{position:"fixed",inset:0,background:"#080d13",zIndex:1000,overflowY:"auto",paddingBottom:"env(safe-area-inset-bottom)"}}>
+      <div style={{padding:"calc(env(safe-area-inset-top) + 8px) 12px 12px"}}>
+        {/* Captured image preview */}
+        <div style={{borderRadius:"10px",overflow:"hidden",border:"1px solid #1e3a5f30",marginBottom:"12px",maxHeight:"28vh"}}>
+          <img src={capturedImg} style={{width:"100%",objectFit:"contain",display:"block"}}/>
+        </div>
+        {ocrRunning&&<div style={{textAlign:"center",color:"#7dd3fc",fontSize:"10px",marginBottom:"8px"}}>Reading sheet...</div>}
+        {/* Seat code */}
+        <div style={{marginBottom:"10px"}}>
+          <div style={{color:"#475569",fontSize:"9px",fontWeight:600,letterSpacing:"1.5px",marginBottom:"4px"}}>SEAT CODE</div>
+          <input value={seatGuess} onChange={e=>setSeatGuess(e.target.value.toUpperCase())} placeholder="B1-5"
+            style={{width:"100%",background:"#0f1520",border:"1px solid #7dd3fc30",color:"#7dd3fc",padding:"12px",fontSize:"18px",fontWeight:700,borderRadius:"8px",textAlign:"center",letterSpacing:"2px"}}/>
+        </div>
+        {/* Name picker */}
+        <div style={{marginBottom:"10px"}}>
+          <div style={{color:"#475569",fontSize:"9px",fontWeight:600,letterSpacing:"1.5px",marginBottom:"4px"}}>NAME</div>
+          <input value={nameSearch} onChange={e=>{setNameSearch(e.target.value);setSelectedName("")}} placeholder="Search registration list..."
+            style={{width:"100%",background:"#0f1520",border:`1px solid ${selectedName?"#4ade8050":"#4ade8020"}`,color:"#4ade80",padding:"10px",fontSize:"14px",fontWeight:600,borderRadius:"8px"}}/>
+          {selectedName&&<div style={{color:"#4ade80",fontSize:"11px",fontWeight:600,marginTop:"4px",padding:"0 4px"}}>Selected: {selectedName}</div>}
+          <div style={{maxHeight:"140px",overflowY:"auto",marginTop:"6px"}}>
+            {nameSuggestions.map(n=>(
+              <div key={n} onClick={()=>{setSelectedName(n);setNameSearch(n)}}
+                style={{padding:"9px 10px",background:selectedName===n?"#4ade8015":"#080d13",border:`1px solid ${selectedName===n?"#4ade8040":"#1e3a5f15"}`,
+                  borderRadius:"6px",marginBottom:"3px",cursor:"pointer",color:selectedName===n?"#4ade80":"#e2e8f0",fontSize:"12px",fontWeight:selectedName===n?700:500,transition:"all 0.1s"}}>{n}</div>
+            ))}
+          </div>
+        </div>
+        {/* Score */}
+        <div style={{marginBottom:"14px"}}>
+          <div style={{color:"#475569",fontSize:"9px",fontWeight:600,letterSpacing:"1.5px",marginBottom:"4px"}}>SCORE</div>
+          <div style={{display:"flex",gap:"6px"}}>
+            {[["1","1-6"],["2","7-8"],["3","9-10+"]].map(([v,label])=>(
+              <button key={v} onClick={()=>setScoreVal(scoreVal===v?"":v)}
+                style={{flex:1,padding:"10px",background:scoreVal===v?"#fbbf2420":"#0f1520",border:`1.5px solid ${scoreVal===v?"#fbbf24":"#fbbf2425"}`,
+                  color:scoreVal===v?"#fbbf24":"#64748b",fontSize:"12px",fontWeight:700,borderRadius:"8px",cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
+                {v} <span style={{fontSize:"9px",fontWeight:400,opacity:0.7}}>({label})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Actions */}
+        <div style={{display:"flex",gap:"8px"}}>
+          <button onClick={handleRetake} style={{flex:1,background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#94a3b8",padding:"14px",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Retake</button>
+          <button onClick={handleConfirm}
+            style={{flex:2,background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"14px",borderRadius:"10px",fontSize:"13px",fontWeight:800,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 16px rgba(74,222,128,0.2)"}}>
+            {seatGuess||selectedName?"Confirm":"Skip (no data)"}</button>
+        </div>
+        <div style={{textAlign:"center",marginTop:"8px"}}>
+          <div style={{color:"#64748b",fontSize:"10px"}}>{captureCount} sheet{captureCount!==1?"s":""} confirmed so far</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── CAMERA VIEW ──
   return(
     <div style={{position:"fixed",inset:0,background:"#000",zIndex:1000}}>
       <canvas ref={canvasRef} style={{display:"none"}}/>
@@ -363,15 +564,15 @@ function Scanner({onCapture,onDone,captureCount}){
         <div style={{position:"absolute",left:`${VF_LEFT*100}%`,top:`${VF_TOP*100}%`,width:`${VF_WIDTH*100}%`,height:`${VF_HEIGHT*100}%`}}>
           {[[0,0,"top","left"],[0,1,"top","right"],[1,0,"bottom","left"],[1,1,"bottom","right"]].map(([r,c,v,h])=>(
             <div key={`${r}${c}`} style={{position:"absolute",[v]:0,[h]:0,width:"28px",height:"28px",
-              [`border${v[0].toUpperCase()+v.slice(1)}`]:`3px solid ${status==="captured"?"#4ade80":"#7dd3fc"}`,
-              [`border${h[0].toUpperCase()+h.slice(1)}`]:`3px solid ${status==="captured"?"#4ade80":"#7dd3fc"}`}}/>
+              [`border${v[0].toUpperCase()+v.slice(1)}`]:"3px solid #7dd3fc",
+              [`border${h[0].toUpperCase()+h.slice(1)}`]:"3px solid #7dd3fc"}}/>
           ))}
         </div>
       </div>
       <div style={{position:"absolute",top:0,left:0,right:0,padding:"calc(env(safe-area-inset-top) + 12px) 16px 12px",background:"linear-gradient(rgba(0,0,0,0.7),transparent)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
           <span style={{color:"#fff",fontSize:"11px",fontWeight:600,letterSpacing:"1px"}}>
-            {status==="captured"?"GOT IT!":status==="ready"?"TAP TO CAPTURE":"WARMING UP..."}
+            {status==="ready"?"TAP TO CAPTURE":"WARMING UP..."}
           </span>
         </div>
         <div style={{background:"rgba(0,0,0,0.5)",padding:"6px 14px",borderRadius:"20px",display:"flex",alignItems:"center",gap:"6px"}}>
@@ -388,7 +589,7 @@ function Scanner({onCapture,onDone,captureCount}){
         <button onClick={captureFrame} disabled={status!=="ready"}
           style={{width:"72px",height:"72px",borderRadius:"50%",border:"4px solid #fff",background:status==="ready"?"rgba(255,255,255,0.2)":"rgba(74,222,128,0.3)",
             display:"flex",alignItems:"center",justifyContent:"center",opacity:status==="ready"?1:0.5,transition:"all 0.2s"}}>
-          <div style={{width:"56px",height:"56px",borderRadius:"50%",background:status==="captured"?"#4ade80":"#fff",transition:"all 0.15s"}}/>
+          <div style={{width:"56px",height:"56px",borderRadius:"50%",background:"#fff",transition:"all 0.15s"}}/>
         </button>
         <button onClick={onDone} style={{background:captureCount>0?"#4ade80":"rgba(255,255,255,0.15)",border:"none",
           color:captureCount>0?"#080d13":"#fff",padding:"12px 28px",borderRadius:"30px",fontSize:"13px",fontWeight:700,minWidth:"130px"}}>
@@ -1177,14 +1378,47 @@ function App(){
   const updateSheet=useCallback((i,f,v)=>{const n=[...sheets];n[i]={...n[i],[f]:v};save(n)},[sheets,save]);
   const deleteSheet=useCallback(i=>{const n=sheets.filter((_,j)=>j!==i);save(n);if(!n.length)setPhase("start")},[sheets,save]);
 
-  const handleCapture=useCallback(dataUrl=>{
-    setCapturedImages(prev=>[...prev,dataUrl]);
-  },[]);
+  const[scanCount,setScanCount]=useState(0);
+
+  const handleScanConfirm=useCallback(entry=>{
+    if(!entry.firstName&&!entry.seatCode){
+      // No data — add to failed scans if has image
+      if(entry.imageUrl)setFailedScans(prev=>[...prev,{...entry,id:`fail-${Date.now()}`}]);
+      setScanCount(c=>c+1);
+      return;
+    }
+    // Add confirmed entry directly to sheets
+    const newEntry={
+      id:`scan-${Date.now()}`,
+      seatCode:entry.seatCode||"",
+      score:entry.score||"",
+      firstName:entry.firstName||"",
+      rrStatus:"",rrDetail:"",
+      imageUrl:entry.imageUrl||""
+    };
+    // Try to match against existing registration entry
+    const updated=[...sheets];
+    let matched=false;
+    if(newEntry.firstName){
+      const idx=updated.findIndex(s=>{
+        const sl=(s.firstName||"").toLowerCase();const nl=newEntry.firstName.toLowerCase();
+        return sl===nl||(sl&&nl&&sl.split(" ")[0]===nl.split(" ")[0]);
+      });
+      if(idx>=0){
+        if(newEntry.seatCode)updated[idx]={...updated[idx],seatCode:newEntry.seatCode};
+        if(newEntry.score)updated[idx]={...updated[idx],score:newEntry.score};
+        if(newEntry.imageUrl)updated[idx]={...updated[idx],imageUrl:newEntry.imageUrl};
+        save(updated);matched=true;
+      }
+    }
+    if(!matched)save([...sheets,newEntry]);
+    setScanCount(c=>c+1);
+  },[sheets,save]);
 
   const handleDoneScan=useCallback(()=>{
-    if(capturedImages.length>0)setPhase("processing");
-    else setPhase(sheets.length>0?"review":"start");
-  },[capturedImages,sheets]);
+    setScanCount(0);
+    setPhase(sheets.length>0?"review":"start");
+  },[sheets]);
 
   const handleProcessingDone=useCallback(processed=>{
     try{
@@ -1380,7 +1614,7 @@ function App(){
       </div>
     );
   }
-  if(phase==="scan")return <Scanner onCapture={handleCapture} onDone={handleDoneScan} captureCount={capturedImages.length}/>;
+  if(phase==="scan")return <Scanner onScanConfirm={handleScanConfirm} onDone={handleDoneScan} captureCount={scanCount} regNames={regNames}/>;
   if(phase==="processing")return <Processing images={capturedImages} regNames={regNames} onDone={handleProcessingDone} onCancel={()=>{setCapturedImages([]);setPhase(sheets.length>0?"review":"start")}}/>;
   if(phase==="start")return <StartScreen regNames={regNames} sheets={sheets}
     onPasteAttendance={handlePasteAttendance} onPasteRR={handlePasteRR}
