@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b65-0313";
+const BUILD="b66-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -1335,31 +1335,31 @@ function App(){
     }catch(e){}setLoading(false);
     // Add corrected scan data as a history entry (embedded, no proxy needed)
     const FIXED_SHEETS=[
-      {id:"fix-1",seatCode:"C1-4",score:"3",firstName:"Mark Craig",rrStatus:"",rrDetail:""},
-      {id:"fix-2",seatCode:"C1-5",score:"1",firstName:"Emily Hunt",rrStatus:"",rrDetail:""},
-      {id:"fix-3",seatCode:"C1-6",score:"2",firstName:"Robert Thompson",rrStatus:"",rrDetail:""},
-      {id:"fix-4",seatCode:"B1-5",score:"2",firstName:"Cash Barkley",rrStatus:"",rrDetail:""},
-      {id:"fix-5",seatCode:"A3-7",score:"2",firstName:"Sergio Bustamante",rrStatus:"",rrDetail:""},
-      {id:"fix-6",seatCode:"A6-6",score:"1",firstName:"Harold Franklin",rrStatus:"",rrDetail:""},
-      {id:"fix-7",seatCode:"A6-1",score:"3",firstName:"Reggie Pope",rrStatus:"",rrDetail:""},
-      {id:"fix-8",seatCode:"C1-3",score:"3",firstName:"Daniel Costre",rrStatus:"",rrDetail:""},
-      {id:"fix-9",seatCode:"B7-5",score:"3",firstName:"Lendria LaBorde",rrStatus:"",rrDetail:""},
-      {id:"fix-10",seatCode:"B7-4",score:"3",firstName:"Shona Moffes",rrStatus:"",rrDetail:""},
-      {id:"fix-11",seatCode:"B3-6",score:"3",firstName:"Emelim Nwaha",rrStatus:"",rrDetail:""},
-      {id:"fix-12",seatCode:"B3-5",score:"3",firstName:"Cindy Fletcher",rrStatus:"",rrDetail:""},
-      {id:"fix-13",seatCode:"C2-3",score:"1",firstName:"Heath Draper",rrStatus:"",rrDetail:""},
-      {id:"fix-14",seatCode:"B7-3",score:"3",firstName:"John Salter",rrStatus:"",rrDetail:""},
-      {id:"fix-15",seatCode:"B2-1",score:"3",firstName:"Pablo S. Valle",rrStatus:"",rrDetail:""},
-      {id:"fix-16",seatCode:"A1-1",score:"2",firstName:"Sonja McKoy",rrStatus:"",rrDetail:""},
-      {id:"fix-17",seatCode:"A3-2",score:"1",firstName:"Gill",rrStatus:"",rrDetail:""},
-      {id:"fix-18",seatCode:"B6-1",score:"2",firstName:"Christopher Isaac",rrStatus:"",rrDetail:""},
-      {id:"fix-19",seatCode:"A5-3",score:"3",firstName:"Subeidahz Devontaye G.",rrStatus:"",rrDetail:""},
-      {id:"fix-20",seatCode:"B5-5",score:"3",firstName:"Marina Rojo",rrStatus:"",rrDetail:""},
-      {id:"fix-21",seatCode:"D1-1",score:"1",firstName:"Roselyn McKay",rrStatus:"",rrDetail:""},
-      {id:"fix-22",seatCode:"B7-1",score:"2",firstName:"Herbert",rrStatus:"",rrDetail:""},
-      {id:"fix-23",seatCode:"C4-2",score:"2",firstName:"Jabari Hunter",rrStatus:"",rrDetail:""},
-      {id:"fix-24",seatCode:"B6-6",score:"3",firstName:"Arvin Singh",rrStatus:"",rrDetail:""},
-      {id:"fix-25",seatCode:"A5-6",score:"3",firstName:"Benjamin Rucker",rrStatus:"",rrDetail:""}
+      {id:"fix-1",seatCode:"C1-4",score:"",firstName:"Mark Craig",rrStatus:"",rrDetail:""},
+      {id:"fix-2",seatCode:"C1-5",score:"",firstName:"Emily Hunt",rrStatus:"",rrDetail:""},
+      {id:"fix-3",seatCode:"C1-6",score:"",firstName:"Robert Thompson",rrStatus:"",rrDetail:""},
+      {id:"fix-4",seatCode:"B1-5",score:"",firstName:"Cash Barkley",rrStatus:"",rrDetail:""},
+      {id:"fix-5",seatCode:"A3-7",score:"",firstName:"Sergio Bustamante",rrStatus:"",rrDetail:""},
+      {id:"fix-6",seatCode:"A6-6",score:"",firstName:"Harold Franklin",rrStatus:"",rrDetail:""},
+      {id:"fix-7",seatCode:"A6-1",score:"",firstName:"Reggie Pope",rrStatus:"",rrDetail:""},
+      {id:"fix-8",seatCode:"C1-3",score:"",firstName:"Daniel Costre",rrStatus:"",rrDetail:""},
+      {id:"fix-9",seatCode:"B7-5",score:"",firstName:"Lendria LaBorde",rrStatus:"",rrDetail:""},
+      {id:"fix-10",seatCode:"B7-4",score:"",firstName:"Shona Moffes",rrStatus:"",rrDetail:""},
+      {id:"fix-11",seatCode:"B3-6",score:"",firstName:"Emelim Nwaha",rrStatus:"",rrDetail:""},
+      {id:"fix-12",seatCode:"B3-5",score:"",firstName:"Cindy Fletcher",rrStatus:"",rrDetail:""},
+      {id:"fix-13",seatCode:"C2-3",score:"",firstName:"Heath Draper",rrStatus:"",rrDetail:""},
+      {id:"fix-14",seatCode:"B7-3",score:"",firstName:"John Salter",rrStatus:"",rrDetail:""},
+      {id:"fix-15",seatCode:"B2-1",score:"",firstName:"Pablo S. Valle",rrStatus:"",rrDetail:""},
+      {id:"fix-16",seatCode:"A1-1",score:"",firstName:"Sonja McKoy",rrStatus:"",rrDetail:""},
+      {id:"fix-17",seatCode:"A3-2",score:"",firstName:"Gill",rrStatus:"",rrDetail:""},
+      {id:"fix-18",seatCode:"B6-1",score:"",firstName:"Christopher Isaac",rrStatus:"",rrDetail:""},
+      {id:"fix-19",seatCode:"A5-3",score:"",firstName:"Subeidahz Devontaye G.",rrStatus:"",rrDetail:""},
+      {id:"fix-20",seatCode:"B5-5",score:"",firstName:"Marina Rojo",rrStatus:"",rrDetail:""},
+      {id:"fix-21",seatCode:"D1-1",score:"",firstName:"Roselyn McKay",rrStatus:"",rrDetail:""},
+      {id:"fix-22",seatCode:"B7-1",score:"",firstName:"Herbert",rrStatus:"",rrDetail:""},
+      {id:"fix-23",seatCode:"C4-2",score:"",firstName:"Jabari Hunter",rrStatus:"",rrDetail:""},
+      {id:"fix-24",seatCode:"B6-6",score:"",firstName:"Arvin Singh",rrStatus:"",rrDetail:""},
+      {id:"fix-25",seatCode:"A5-6",score:"",firstName:"Benjamin Rucker",rrStatus:"",rrDetail:""}
     ];
     // Full room chart from physical seating photo — sections A(cols1-7) B(cols8-14) C(cols15-20), rows 1-7
     const ROOM_CHART=[
