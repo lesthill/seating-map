@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b62-0313";
+const BUILD="b63-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -1544,10 +1544,28 @@ function App(){
       }
       return s;
     });
+    // Auto-link registration pairs with groupId
+    if(regPairs.length){
+      regPairs.forEach(pair=>{
+        const pi=restored.findIndex(s=>s.firstName&&(
+          s.firstName.toLowerCase()===pair.primary.toLowerCase()||
+          fuzzyMatch(pair.primary,[s.firstName],1).length
+        ));
+        const gi=restored.findIndex(s=>s.firstName&&(
+          s.firstName.toLowerCase()===pair.guest.toLowerCase()||
+          fuzzyMatch(pair.guest,[s.firstName],1).length
+        ));
+        if(pi>=0&&gi>=0&&pi!==gi){
+          const gid=restored[pi].groupId||restored[gi].groupId||`g${Date.now()}${Math.random().toString(36).slice(2,5)}`;
+          restored[pi]={...restored[pi],groupId:gid};
+          restored[gi]={...restored[gi],groupId:gid};
+        }
+      });
+    }
     save(restored);
     if(entry.event)saveEventInfo(entry.event);
     setPhase("review");
-  },[save,saveEventInfo,regNames]);
+  },[save,saveEventInfo,regNames,regPairs]);
   const removeFromHistory=useCallback((id)=>{
     const updated=history.filter(h=>h.id!==id);
     setHistory(updated);
