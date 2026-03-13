@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b56-0313";
+const BUILD="b57-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
@@ -1331,23 +1331,27 @@ function App(){
       const ev=localStorage?.getItem(EK);if(ev)setEventInfo(JSON.parse(ev));
       const h=localStorage?.getItem(HK);if(h)setHistory(JSON.parse(h));
     }catch(e){}setLoading(false);
-    // Check for ?load=fix to inject corrected sheet data from proxy
+    // Check for ?load=fix to add corrected sheet data as a history entry
     const params=new URLSearchParams(window.location.search);
     if(params.get("load")==="fix"){
       fetch(PROXY_URL.replace(/\/?$/,"")+"/sheets",{headers:{"Bypass-Tunnel-Reminder":"true"}})
         .then(r=>r.json()).then(fixedSheets=>{
           if(!fixedSheets||!fixedSheets.length)return;
-          // Merge with existing reg names by fuzzy matching
-          const savedReg=localStorage?.getItem(RK);
-          const rn=savedReg?JSON.parse(savedReg):[];
-          const merged=fixedSheets.map(s=>{
-            if(s.firstName&&rn.length){
-              const m=fuzzyMatch(s.firstName,rn,1);
-              if(m.length)s.firstName=m[0];
-            }
-            return s;
-          });
-          setSheets(merged);save(merged);setPhase("review");
+          const existing=localStorage?.getItem(HK);
+          const hist=existing?JSON.parse(existing):[];
+          // Don't add duplicate if already there
+          if(hist.some(h=>h.id==="fix-session"))return;
+          const entry={
+            id:"fix-session",
+            date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}),
+            event:{location:"Corrected Scans",date:"Mar 13, 2026",code:""},
+            count:fixedSheets.length,
+            seated:fixedSheets.filter(s=>s.seatCode&&s.firstName).length,
+            sheets:fixedSheets
+          };
+          const updated=[entry,...hist].slice(0,20);
+          try{localStorage?.setItem(HK,JSON.stringify(updated))}catch(e){}
+          setHistory(updated);
           // Remove ?load=fix from URL
           window.history.replaceState({},"",window.location.pathname);
         }).catch(e=>console.error("Load fix failed:",e));
@@ -1384,10 +1388,18 @@ function App(){
     save([]);setPhase("start");
   },[sheets,history,eventInfo,save]);
   const restoreFromHistory=useCallback((entry)=>{
-    save(entry.sheets);
+    // Fuzzy-match names against loaded reg names
+    const restored=entry.sheets.map(s=>{
+      if(s.firstName&&regNames.length){
+        const m=fuzzyMatch(s.firstName,regNames,1);
+        if(m.length)return{...s,firstName:m[0]};
+      }
+      return s;
+    });
+    save(restored);
     if(entry.event)saveEventInfo(entry.event);
     setPhase("review");
-  },[save,saveEventInfo]);
+  },[save,saveEventInfo,regNames]);
   const removeFromHistory=useCallback((id)=>{
     const updated=history.filter(h=>h.id!==id);
     setHistory(updated);
