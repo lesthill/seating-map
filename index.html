@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b66-0313";
+const BUILD="b67-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -1324,7 +1324,8 @@ function App(){
   useEffect(()=>{
     try{
       const v=localStorage?.getItem(SK);
-      if(v){const d=JSON.parse(v);if(d.length){setSheets(d);
+      if(v){const d=JSON.parse(v).map(s=>({...s,score:"",rrStatus:"",rrDetail:""}));if(d.length){setSheets(d);
+        try{const lite=d.map(({imageUrl,...rest})=>rest);localStorage?.setItem(SK,JSON.stringify(lite))}catch(e){}
         const hasSeatCodes=d.some(s=>s.seatCode);
         setPhase(hasSeatCodes?"review":"start");
       }}
