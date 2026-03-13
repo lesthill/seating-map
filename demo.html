@@ -259,9 +259,17 @@ async function processImage(imageDataUrl,regNames){
     let seatCode=data.seatCode||"";
     seatCode=seatCode.toUpperCase().replace(/\s/g,"");
     if(seatCode&&!seatCode.includes("-")){
-      // Try to format as X#-#
       const m=seatCode.match(/([A-Z])(\d+)[-.]?(\d)/);
       if(m)seatCode=`${m[1]}${m[2]}-${m[3]}`;
+    }
+    // Fix OCR misreads: seat 0 → 1 (no seat 0 exists)
+    if(seatCode){
+      const sm=seatCode.match(/^([A-Z])(\d+)-(\d+)$/);
+      if(sm){
+        let seat=parseInt(sm[3],10);
+        if(seat===0)seat=1;
+        seatCode=`${sm[1]}${sm[2]}-${seat}`;
+      }
     }
     return{seatCode,firstName:name,score:String(data.score||"").replace(/[^0-9]/g,""),isPrimary:data.isPrimary!==false};
   }catch(e){
