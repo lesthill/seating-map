@@ -275,84 +275,22 @@ function autoMapColumns(headers){
 }
 
 // ══════════════════════════════════════
-// AUTO-CAPTURE SCANNER
+// MANUAL-CAPTURE SCANNER
 // ══════════════════════════════════════
 function Scanner({onCapture,onDone,captureCount}){
-  const videoRef=useRef(null);const canvasRef=useRef(null);const streamRef=useRef(null);const analyzeRef=useRef(null);
-  const prevFrameRef=useRef(null);const stableCountRef=useRef(0);const cooldownRef=useRef(false);
+  const videoRef=useRef(null);const canvasRef=useRef(null);const streamRef=useRef(null);
   const[flash,setFlash]=useState(false);const[status,setStatus]=useState("starting");const[error,setError]=useState(null);
-  const[momMode,setMomMode]=useState(false);
-  const[momIdx,setMomIdx]=useState(0);
-  const momJokes=["...that's what your mom said last night","hold it right there... said your mom","gotcha bitch","steady hands... unlike your mom last night","don't move... your mom didn't either","that's what she said... your mom, specifically","your mom holds it steadier than you"];
-  const momTimerRef=useRef(null);const momCycleRef=useRef(null);
-  useEffect(()=>{
-    if(status==="waiting"){
-      momTimerRef.current=setTimeout(()=>setMomMode(true),5000);
-      return()=>{clearTimeout(momTimerRef.current);clearInterval(momCycleRef.current);setMomMode(false);};
-    }else{setMomMode(false);}
-  },[status]);
-  useEffect(()=>{
-    if(momMode){momCycleRef.current=setInterval(()=>setMomIdx(i=>(i+1)%momJokes.length),4000);return()=>clearInterval(momCycleRef.current);}
-  },[momMode]);
 
-  const STABILITY_THRESHOLD=10;   // Max pixel diff for "stable"
-  const STABLE_FRAMES_NEEDED=25;  // ~0.8s at 30fps — longer wait for focus
-  const MOTION_THRESHOLD=30;      // Min diff for sheet swap
-  const COOLDOWN_MS=2500;         // Pause after capture
-  const SAMPLE_SIZE=100;          // Higher resolution sampling
-  const SHARPNESS_THRESHOLD=15;   // Min Laplacian variance for "in focus"
-  const DOC_CONTRAST_THRESHOLD=40;// Min contrast range for "document present"
-
-  // Viewfinder: 8.5×11 landscape ratio (wider than tall)
-  const VF_WIDTH=0.88;   // 88% of screen width
-  const VF_HEIGHT=VF_WIDTH*(8.5/11); // ≈ 68% — 8.5:11 landscape
-  const VF_LEFT=(1-VF_WIDTH)/2;      // centered horizontally
-  const VF_TOP=0.12;                  // below status bar
-  // Crop area: slightly larger than viewfinder (3% padding each side)
-  const CROP_PAD=0.03;
-  const CROP_LEFT=Math.max(0,VF_LEFT-CROP_PAD);
-  const CROP_TOP=Math.max(0,VF_TOP-CROP_PAD);
-  const CROP_W=Math.min(1-CROP_LEFT,VF_WIDTH+2*CROP_PAD);
-  const CROP_H=Math.min(1-CROP_TOP,VF_HEIGHT+2*CROP_PAD);
-
-  // Compute sharpness using Laplacian variance (edge detection)
-  function computeSharpness(gray,w,h){
-    let sum=0,sum2=0,count=0;
-    for(let y=1;y<h-1;y++){
-      for(let x=1;x<w-1;x++){
-        // Laplacian: center*4 - top - bottom - left - right
-        const lap=4*gray[y*w+x]-gray[(y-1)*w+x]-gray[(y+1)*w+x]-gray[y*w+x-1]-gray[y*w+x+1];
-        sum+=lap;sum2+=lap*lap;count++;
-      }
-    }
-    const mean=sum/count;
-    return Math.sqrt(sum2/count-mean*mean); // variance of Laplacian
-  }
-
-  // Check if there's a document (high contrast white paper with dark text)
-  function checkDocPresence(gray,w,h){
-    // Sample the viewfinder region
-    const x0=Math.floor(w*VF_LEFT),x1=Math.floor(w*(VF_LEFT+VF_WIDTH));
-    const y0=Math.floor(h*VF_TOP),y1=Math.floor(h*(VF_TOP+VF_HEIGHT));
-    let min=255,max=0,brightCount=0,total=0;
-    for(let y=y0;y<y1;y+=2){
-      for(let x=x0;x<x1;x+=2){
-        const v=gray[y*w+x];
-        if(v<min)min=v;if(v>max)max=v;
-        if(v>160)brightCount++;// White-ish pixels (paper)
-        total++;
-      }
-    }
-    const contrast=max-min;
-    const brightRatio=brightCount/total;
-    // Document present = high contrast AND significant bright area (paper)
-    return contrast>DOC_CONTRAST_THRESHOLD&&brightRatio>0.2;
-  }
+  // Viewfinder: tighter crop — 70% width, 8.5:11 landscape ratio
+  const VF_WIDTH=0.70;
+  const VF_HEIGHT=VF_WIDTH*(8.5/11);
+  const VF_LEFT=(1-VF_WIDTH)/2;
+  const VF_TOP=0.15;
 
   const startCam=useCallback(async()=>{
     try{
       const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1440}},audio:false});
-      streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;setStatus("scanning");
+      streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;setStatus("ready");
     }catch(e){setError("Camera access denied. Check permissions.")}
   },[]);
 
@@ -360,115 +298,59 @@ function Scanner({onCapture,onDone,captureCount}){
   function findPaperBounds(ctx,w,h){
     const data=ctx.getImageData(0,0,w,h).data;
     const gray=(x,y)=>{const i=(y*w+x)*4;return data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114;};
-    const BRIGHT=140; // paper brightness threshold
-    const EDGE_SAMPLE=8; // scan lines per edge
-    // Scan from each edge inward to find where paper starts
+    const BRIGHT=140;const EDGE_SAMPLE=8;
     let top=0,bottom=h-1,left=0,right=w-1;
-    // Top edge: scan down
     for(let y=0;y<h*0.4;y++){
       let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const x=Math.floor(w*0.2+w*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
       if(bright>=EDGE_SAMPLE*0.6){top=y;break;}
     }
-    // Bottom edge: scan up
     for(let y=h-1;y>h*0.6;y--){
       let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const x=Math.floor(w*0.2+w*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
       if(bright>=EDGE_SAMPLE*0.6){bottom=y;break;}
     }
-    // Left edge: scan right
     for(let x=0;x<w*0.4;x++){
       let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const y=Math.floor(h*0.2+h*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
       if(bright>=EDGE_SAMPLE*0.6){left=x;break;}
     }
-    // Right edge: scan left
     for(let x=w-1;x>w*0.6;x--){
       let bright=0;for(let s=0;s<EDGE_SAMPLE;s++){const y=Math.floor(h*0.2+h*0.6*(s/(EDGE_SAMPLE-1)));if(gray(x,y)>BRIGHT)bright++;}
       if(bright>=EDGE_SAMPLE*0.6){right=x;break;}
     }
-    // Add small padding
     const pad=Math.round(Math.min(w,h)*0.01);
     top=Math.max(0,top-pad);left=Math.max(0,left-pad);
     bottom=Math.min(h-1,bottom+pad);right=Math.min(w-1,right+pad);
-    // Only use if we found a reasonable rectangle (at least 30% of frame)
     const cropW=right-left,cropH=bottom-top;
     if(cropW>w*0.3&&cropH>h*0.3)return{x:left,y:top,w:cropW,h:cropH};
-    return null; // fallback to full frame
+    return null;
   }
 
   const captureFrame=useCallback(()=>{
-    if(!videoRef.current||!canvasRef.current)return;
+    if(!videoRef.current||!canvasRef.current||status!=="ready")return;
     const v=videoRef.current;const c=canvasRef.current;
     const vw=v.videoWidth,vh=v.videoHeight;
-    // First crop to viewfinder area
-    const sx=Math.round(CROP_LEFT*vw),sy=Math.round(CROP_TOP*vh);
-    const sw=Math.round(CROP_W*vw),sh=Math.round(CROP_H*vh);
-    // Draw viewfinder crop to temp canvas for paper detection
+    // Crop to viewfinder area (tight)
+    const sx=Math.round(VF_LEFT*vw),sy=Math.round(VF_TOP*vh);
+    const sw=Math.round(VF_WIDTH*vw),sh=Math.round(VF_HEIGHT*vh);
     const tmp=document.createElement("canvas");tmp.width=sw;tmp.height=sh;
     const tctx=tmp.getContext("2d");
     tctx.drawImage(v,sx,sy,sw,sh,0,0,sw,sh);
-    // Detect paper bounds within the viewfinder crop
+    // Try to detect and crop to just the paper
     const bounds=findPaperBounds(tctx,sw,sh);
     if(bounds){
-      // Crop tight to paper
       c.width=bounds.w;c.height=bounds.h;
       c.getContext("2d").drawImage(tmp,bounds.x,bounds.y,bounds.w,bounds.h,0,0,bounds.w,bounds.h);
     }else{
-      // Fallback: use full viewfinder crop
       c.width=sw;c.height=sh;
       c.getContext("2d").drawImage(tmp,0,0);
     }
     setFlash(true);setTimeout(()=>setFlash(false),200);
-    cooldownRef.current=true;setStatus("captured");
+    setStatus("captured");
     const dataUrl=c.toDataURL("image/jpeg",0.85);
     onCapture(dataUrl);
-    setTimeout(()=>{cooldownRef.current=false;prevFrameRef.current=null;stableCountRef.current=0;setStatus("scanning")},COOLDOWN_MS);
-  },[onCapture]);
+    setTimeout(()=>setStatus("ready"),800);
+  },[onCapture,status]);
 
-  const analyze=useCallback(()=>{
-    if(!videoRef.current||videoRef.current.readyState<2||cooldownRef.current){analyzeRef.current=requestAnimationFrame(analyze);return;}
-    const v=videoRef.current;
-    const tmpC=document.createElement("canvas");tmpC.width=SAMPLE_SIZE;tmpC.height=SAMPLE_SIZE;
-    const ctx=tmpC.getContext("2d");ctx.drawImage(v,0,0,SAMPLE_SIZE,SAMPLE_SIZE);
-    const pixels=ctx.getImageData(0,0,SAMPLE_SIZE,SAMPLE_SIZE).data;
-    const gray=new Uint8Array(SAMPLE_SIZE*SAMPLE_SIZE);
-    for(let i=0;i<gray.length;i++)gray[i]=Math.round(pixels[i*4]*0.299+pixels[i*4+1]*0.587+pixels[i*4+2]*0.114);
-    if(prevFrameRef.current){
-      // 1. Check motion (frame-to-frame diff)
-      let totalDiff=0;
-      for(let i=0;i<gray.length;i++)totalDiff+=Math.abs(gray[i]-prevFrameRef.current[i]);
-      const avgDiff=totalDiff/gray.length;
-
-      if(avgDiff>MOTION_THRESHOLD){
-        // Big motion — sheet being swapped
-        stableCountRef.current=0;setStatus("waiting");
-      }else if(avgDiff<STABILITY_THRESHOLD){
-        stableCountRef.current++;
-
-        if(stableCountRef.current>=STABLE_FRAMES_NEEDED){
-          // 2. Check sharpness (is the image in focus?)
-          const sharpness=computeSharpness(gray,SAMPLE_SIZE,SAMPLE_SIZE);
-          // 3. Check document presence (is there actually a paper with text?)
-          const hasDoc=checkDocPresence(gray,SAMPLE_SIZE,SAMPLE_SIZE);
-
-          if(sharpness>=SHARPNESS_THRESHOLD&&hasDoc){
-            stableCountRef.current=0;
-            captureFrame();
-          }else{
-            // Not ready — keep waiting but don't reset fully
-            stableCountRef.current=STABLE_FRAMES_NEEDED-3;
-            if(!hasDoc)setStatus("waiting"); // no document visible
-          }
-        }
-      }else{
-        // Minor movement
-        stableCountRef.current=Math.max(0,stableCountRef.current-2);
-      }
-    }
-    prevFrameRef.current=gray;
-    analyzeRef.current=requestAnimationFrame(analyze);
-  },[captureFrame]);
-
-  useEffect(()=>{startCam();return()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop());if(analyzeRef.current)cancelAnimationFrame(analyzeRef.current)}},[]);
-  useEffect(()=>{if(status==="scanning"||status==="waiting"){analyzeRef.current=requestAnimationFrame(analyze)}return()=>{if(analyzeRef.current)cancelAnimationFrame(analyzeRef.current)}},[status,analyze]);
+  useEffect(()=>{startCam();return()=>{if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop())}},[]);
 
   if(error)return(
     <div style={{position:"fixed",inset:0,background:"#080d13",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px"}}>
@@ -486,7 +368,7 @@ function Scanner({onCapture,onDone,captureCount}){
       <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
         <svg width="100%" height="100%" style={{position:"absolute",inset:0}}>
           <defs><mask id="co"><rect width="100%" height="100%" fill="white"/><rect x={`${VF_LEFT*100}%`} y={`${VF_TOP*100}%`} width={`${VF_WIDTH*100}%`} height={`${VF_HEIGHT*100}%`} rx="12" fill="black"/></mask></defs>
-          <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#co)"/>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#co)"/>
         </svg>
         <div style={{position:"absolute",left:`${VF_LEFT*100}%`,top:`${VF_TOP*100}%`,width:`${VF_WIDTH*100}%`,height:`${VF_HEIGHT*100}%`}}>
           {[[0,0,"top","left"],[0,1,"top","right"],[1,0,"bottom","left"],[1,1,"bottom","right"]].map(([r,c,v,h])=>(
@@ -498,9 +380,8 @@ function Scanner({onCapture,onDone,captureCount}){
       </div>
       <div style={{position:"absolute",top:0,left:0,right:0,padding:"calc(env(safe-area-inset-top) + 12px) 16px 12px",background:"linear-gradient(rgba(0,0,0,0.7),transparent)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-          <span className={`status-dot ${status==="scanning"?"scanning":"waiting"}`}/>
-          <span style={{color:"#fff",fontSize:"11px",fontWeight:600,letterSpacing:"1px",transition:"opacity 0.3s"}}>
-            {status==="scanning"?"READY — LOOKING GOOD":status==="waiting"?(momMode?momJokes[momIdx]:"HOLD STEADY..."):status==="captured"?"GOT IT!":"WARMING UP..."}
+          <span style={{color:"#fff",fontSize:"11px",fontWeight:600,letterSpacing:"1px"}}>
+            {status==="captured"?"GOT IT!":status==="ready"?"TAP TO CAPTURE":"WARMING UP..."}
           </span>
         </div>
         <div style={{background:"rgba(0,0,0,0.5)",padding:"6px 14px",borderRadius:"20px",display:"flex",alignItems:"center",gap:"6px"}}>
@@ -510,13 +391,18 @@ function Scanner({onCapture,onDone,captureCount}){
       </div>
       <div style={{position:"absolute",top:`${Math.max(1,VF_TOP*100-3.5)}%`,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
         <div style={{color:"#fff",fontSize:"12px",fontWeight:600,textShadow:"0 1px 4px rgba(0,0,0,0.8)",opacity:0.8}}>
-          {captureCount===0?"Place the goal sheet inside the box":"Nice! Slide the next sheet in"}
+          {captureCount===0?"Center ONE sheet in the box":"Nice! Line up the next sheet"}
         </div>
       </div>
-      <div style={{position:"absolute",bottom:0,left:0,right:0,paddingBottom:"calc(env(safe-area-inset-bottom) + 16px)",padding:"16px",display:"flex",justifyContent:"center"}}>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,paddingBottom:"calc(env(safe-area-inset-bottom) + 16px)",padding:"16px",display:"flex",flexDirection:"column",alignItems:"center",gap:"14px"}}>
+        <button onClick={captureFrame} disabled={status!=="ready"}
+          style={{width:"72px",height:"72px",borderRadius:"50%",border:"4px solid #fff",background:status==="ready"?"rgba(255,255,255,0.2)":"rgba(74,222,128,0.3)",
+            display:"flex",alignItems:"center",justifyContent:"center",opacity:status==="ready"?1:0.5,transition:"all 0.2s"}}>
+          <div style={{width:"56px",height:"56px",borderRadius:"50%",background:status==="captured"?"#4ade80":"#fff",transition:"all 0.15s"}}/>
+        </button>
         <button onClick={onDone} style={{background:captureCount>0?"#4ade80":"rgba(255,255,255,0.15)",border:"none",
-          color:captureCount>0?"#080d13":"#fff",padding:"14px 32px",borderRadius:"30px",fontSize:"14px",fontWeight:700,minWidth:"140px"}}>
-          {captureCount>0?`All Done — ${captureCount} scanned`:"Go Back"}
+          color:captureCount>0?"#080d13":"#fff",padding:"12px 28px",borderRadius:"30px",fontSize:"13px",fontWeight:700,minWidth:"130px"}}>
+          {captureCount>0?`Done — ${captureCount} scanned`:"Go Back"}
         </button>
       </div>
     </div>
@@ -1228,6 +1114,7 @@ function App(){
   const[sheets,setSheets]=useState([]);
   const[regNames,setRegNames]=useState([]);
   const[capturedImages,setCapturedImages]=useState([]);
+  const[failedScans,setFailedScans]=useState([]);
   const[loading,setLoading]=useState(true);
   const[eventInfo,setEventInfo]=useState({location:"",date:"",code:""});
   const[splash,setSplash]=useState("playing");
@@ -1302,13 +1189,17 @@ function App(){
   const handleProcessingDone=useCallback(processed=>{
     try{
       if(!processed||!processed.length){setCapturedImages([]);setPhase("start");return;}
-      // Merge scan results with existing RR data
       const updated=[...sheets];
       const usedIndices=new Set();
       const unmatched=[];
+      const failed=[];
 
       processed.forEach(scan=>{
-        if(!scan.firstName&&!scan.seatCode){unmatched.push(scan);return;}
+        if(!scan.firstName&&!scan.seatCode){
+          // Failed scan — has image but no data extracted
+          if(scan.imageUrl)failed.push({...scan,id:scan.id||`fail-${Date.now()}-${Math.random().toString(36).slice(2,6)}`});
+          return;
+        }
         let bestIdx=-1,bestScore=0;
         updated.forEach((sh,i)=>{
           if(usedIndices.has(i))return;
@@ -1330,11 +1221,10 @@ function App(){
         }
       });
       const final=[...updated,...unmatched];
-      console.log("[Processing] Done:",final.length,"sheets,",final.filter(s=>s.seatCode).length,"with seats");
-      save(final);setCapturedImages([]);setPhase("review");
+      console.log("[Processing] Done:",final.length,"sheets,",final.filter(s=>s.seatCode).length,"with seats,",failed.length,"failed");
+      save(final);setFailedScans(prev=>[...prev,...failed]);setCapturedImages([]);setPhase("review");
     }catch(e){
       console.error("[Processing] Error in handleProcessingDone:",e);
-      // Still try to show what we have
       if(processed&&processed.length){
         const fallback=processed.filter(s=>s.firstName||s.seatCode).map(s=>({...s,rrStatus:"",rrDetail:""}));
         save([...sheets,...fallback]);
@@ -1520,6 +1410,46 @@ function App(){
           <button onClick={()=>setReviewTab("list")} style={{flex:1,background:reviewTab==="list"?"linear-gradient(135deg,#7dd3fc18,#7dd3fc08)":"transparent",border:"none",color:reviewTab==="list"?"#7dd3fc":"#475569",padding:"10px",fontSize:"11px",borderRadius:"8px",fontWeight:600,cursor:"pointer",transition:"all 0.2s",fontFamily:"inherit"}}>List ({sheets.length})</button>
         </div>
       </div>
+
+      {failedScans.length>0&&(
+        <div style={{margin:"10px",padding:"12px",background:"#1a0a0a",border:"1px solid #f8717130",borderRadius:"10px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+            <div style={{color:"#f87171",fontSize:"11px",fontWeight:700,letterSpacing:"1px"}}>{failedScans.length} FAILED SCAN{failedScans.length>1?"S":""}</div>
+            <button onClick={()=>setFailedScans([])} style={{background:"transparent",border:"none",color:"#64748b",fontSize:"9px",cursor:"pointer",textDecoration:"underline"}}>dismiss all</button>
+          </div>
+          {failedScans.map((fs,fi)=>(
+            <div key={fs.id} style={{background:"#0f1520",border:"1px solid #1e3a5f30",borderRadius:"8px",padding:"10px",marginBottom:"8px"}}>
+              <div style={{display:"flex",gap:"10px",alignItems:"flex-start"}}>
+                {fs.imageUrl&&<img src={fs.imageUrl} style={{width:"80px",height:"60px",objectFit:"cover",borderRadius:"6px",border:"1px solid #1e3a5f30",flexShrink:0}}/>}
+                <div style={{flex:1,display:"flex",flexDirection:"column",gap:"6px"}}>
+                  <input value={fs.firstName||""} onChange={e=>{const u=[...failedScans];u[fi]={...u[fi],firstName:e.target.value};setFailedScans(u)}}
+                    placeholder="Name" style={{width:"100%",background:"#080d13",border:"1px solid #4ade8030",color:"#4ade80",padding:"7px 8px",fontSize:"12px",fontWeight:600,borderRadius:"6px"}}/>
+                  <div style={{display:"flex",gap:"6px"}}>
+                    <input value={fs.seatCode||""} onChange={e=>{const u=[...failedScans];u[fi]={...u[fi],seatCode:e.target.value.toUpperCase()};setFailedScans(u)}}
+                      placeholder="Seat (B1-5)" style={{flex:1,background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"7px 8px",fontSize:"12px",fontWeight:700,borderRadius:"6px",textAlign:"center"}}/>
+                    <select value={fs.score||""} onChange={e=>{const u=[...failedScans];u[fi]={...u[fi],score:e.target.value};setFailedScans(u)}}
+                      style={{background:"#080d13",border:"1px solid #fbbf2430",color:"#fbbf24",padding:"7px 8px",fontSize:"11px",fontWeight:600,borderRadius:"6px"}}>
+                      <option value="">Score</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                    </select>
+                  </div>
+                  <div style={{display:"flex",gap:"6px"}}>
+                    <button onClick={()=>{
+                      const entry={id:fs.id,seatCode:fs.seatCode||"",score:fs.score||"",firstName:fs.firstName||"",rrStatus:"",rrDetail:"",imageUrl:fs.imageUrl};
+                      if(entry.firstName||entry.seatCode){save([...sheets,entry]);setFailedScans(failedScans.filter((_,i)=>i!==fi));}
+                    }} disabled={!fs.firstName&&!fs.seatCode}
+                      style={{flex:1,background:fs.firstName||fs.seatCode?"#4ade8020":"#0f1520",border:`1px solid ${fs.firstName||fs.seatCode?"#4ade8050":"#47556920"}`,
+                        color:fs.firstName||fs.seatCode?"#4ade80":"#475569",padding:"7px",fontSize:"11px",fontWeight:600,borderRadius:"6px",cursor:"pointer",fontFamily:"inherit"}}>
+                      Add to Chart</button>
+                    <button onClick={()=>setFailedScans(failedScans.filter((_,i)=>i!==fi))}
+                      style={{background:"transparent",border:"1px solid #f8717120",color:"#f87171",padding:"7px 10px",fontSize:"11px",borderRadius:"6px",cursor:"pointer",fontFamily:"inherit"}}>
+                      Skip</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {reviewTab==="map"&&(
         <div style={{padding:"10px"}}>
