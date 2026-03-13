@@ -85,8 +85,8 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b60-0313";
-const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
+const BUILD="b61-0313";
+const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
 class ErrorBoundary extends React.Component{
@@ -397,7 +397,7 @@ function autoMapColumns(headers){
 // SCAN + CONFIRM SCANNER
 // ══════════════════════════════════════
 // Flow: capture → OCR seat code → show image + seat guess + name picker → confirm → next
-function Scanner({onScanConfirm,onDone,captureCount,regNames}){
+function Scanner({onScanConfirm,onDone,captureCount,regNames,regPairs,confirmedSeats}){
   const videoRef=useRef(null);const canvasRef=useRef(null);const streamRef=useRef(null);
   const[flash,setFlash]=useState(false);const[status,setStatus]=useState("starting");const[error,setError]=useState(null);
   // Confirm state
@@ -439,7 +439,7 @@ function Scanner({onScanConfirm,onDone,captureCount,regNames}){
     try{
       const resp=await fetch(PROXY_URL,{
         method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
-        body:JSON.stringify({image:dataUrl,names:regNames.slice(0,100)}),signal:AbortSignal.timeout(15000)
+        body:JSON.stringify({image:dataUrl,names:regNames.slice(0,100),pairs:regPairs||[],seated:confirmedSeats||[]}),signal:AbortSignal.timeout(15000)
       }).then(r=>r.json()).catch(()=>({}));
       if(resp.seatCode){
         setSeatGuess(prev=>{
@@ -1310,6 +1310,7 @@ function App(){
   const[phase,setPhase]=useState("start");
   const[sheets,setSheets]=useState([]);
   const[regNames,setRegNames]=useState([]);
+  const[regPairs,setRegPairs]=useState([]); // [{primary:"Mark Craig",guest:"Emily Hunt"}]
   const[capturedImages,setCapturedImages]=useState([]);
   const[failedScans,setFailedScans]=useState([]);
   const[loading,setLoading]=useState(true);
@@ -1328,6 +1329,7 @@ function App(){
         setPhase(hasSeatCodes?"review":"start");
       }}
       const r=localStorage?.getItem(RK);if(r)setRegNames(JSON.parse(r));
+      const p=localStorage?.getItem(PK);if(p)setRegPairs(JSON.parse(p));
       const ev=localStorage?.getItem(EK);if(ev)setEventInfo(JSON.parse(ev));
       const h=localStorage?.getItem(HK);if(h)setHistory(JSON.parse(h));
     }catch(e){}setLoading(false);
@@ -1467,9 +1469,29 @@ function App(){
         save(updated);matched=true;
       }
     }
-    if(!matched)save([...sheets,newEntry]);
+    if(!matched){updated.push(newEntry);save(updated);}
+
+    // Auto-link registration pairs with groupId
+    if(regPairs.length&&newEntry.firstName){
+      const nl=newEntry.firstName.toLowerCase();
+      const pair=regPairs.find(p=>
+        p.primary.toLowerCase()===nl||p.guest.toLowerCase()===nl||
+        fuzzyMatch(newEntry.firstName,[p.primary],1).length||fuzzyMatch(newEntry.firstName,[p.guest],1).length
+      );
+      if(pair){
+        const partnerName=pair.primary.toLowerCase()===nl?pair.guest:pair.primary;
+        const myIdx=updated.findIndex(s=>(s.firstName||"").toLowerCase()===nl||(s.firstName&&fuzzyMatch(newEntry.firstName,[s.firstName],1).length));
+        const partnerIdx=updated.findIndex(s=>s.firstName&&(s.firstName.toLowerCase()===partnerName.toLowerCase()||fuzzyMatch(partnerName,[s.firstName],1).length));
+        if(myIdx>=0&&partnerIdx>=0&&myIdx!==partnerIdx){
+          const gid=updated[myIdx].groupId||updated[partnerIdx].groupId||`g${Date.now()}`;
+          updated[myIdx]={...updated[myIdx],groupId:gid};
+          updated[partnerIdx]={...updated[partnerIdx],groupId:gid};
+          save(updated);
+        }
+      }
+    }
     setScanCount(c=>c+1);
-  },[sheets,save]);
+  },[sheets,save,regPairs]);
 
   const handleDoneScan=useCallback(()=>{
     setScanCount(0);
@@ -1562,15 +1584,23 @@ function App(){
     if(firstCol<0)firstCol=1;
     if(lastCol<0)lastCol=2;
     if(guestCol<0)guestCol=7;
+    const pairs=[];
     let names=allRows.map(r=>{
       const first=(r[firstCol]||"").trim();const last=(r[lastCol]||"").trim();
       if(!first)return"";return last?`${first} ${last}`:first;
     }).filter(Boolean);
-    const guests=allRows.map(r=>(r[guestCol]||"").trim()).filter(Boolean);
+    const guests=allRows.map((r,i)=>{
+      const g=(r[guestCol]||"").trim();
+      if(g){
+        const primary=names[i]||"";
+        if(primary)pairs.push({primary,guest:g});
+      }
+      return g;
+    }).filter(Boolean);
     names=[...names,...guests];
     const unique=[...new Set(names)].sort();
-    setRegNames(unique);
-    try{localStorage?.setItem(RK,JSON.stringify(unique))}catch(e){}
+    setRegNames(unique);setRegPairs(pairs);
+    try{localStorage?.setItem(RK,JSON.stringify(unique));localStorage?.setItem(PK,JSON.stringify(pairs))}catch(e){}
   },[eventInfo,saveEventInfo]);
 
   // Parse pasted tab-separated RR data
@@ -1670,7 +1700,7 @@ function App(){
       </div>
     );
   }
-  if(phase==="scan")return <Scanner onScanConfirm={handleScanConfirm} onDone={handleDoneScan} captureCount={scanCount} regNames={regNames}/>;
+  if(phase==="scan")return <Scanner onScanConfirm={handleScanConfirm} onDone={handleDoneScan} captureCount={scanCount} regNames={regNames} regPairs={regPairs} confirmedSeats={sheets.filter(s=>s.seatCode&&s.firstName).map(s=>({name:s.firstName,seat:s.seatCode}))}/>;
   if(phase==="processing")return <Processing images={capturedImages} regNames={regNames} onDone={handleProcessingDone} onCancel={()=>{setCapturedImages([]);setPhase(sheets.length>0?"review":"start")}}/>;
   if(phase==="start")return <StartScreen regNames={regNames} sheets={sheets}
     onPasteAttendance={handlePasteAttendance} onPasteRR={handlePasteRR}
