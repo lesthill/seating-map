@@ -960,7 +960,7 @@ function generatePDF(sheets,eventInfo){
 // ══════════════════════════════════════
 // START SCREEN
 // ══════════════════════════════════════
-function StartScreen({regNames,sheets,onPasteAttendance,onPasteRR,onScan,onClearNames,onClearRR,eventInfo,onEventInfo,history,onRestore}){
+function StartScreen({regNames,sheets,onPasteAttendance,onPasteRR,onScan,onClearNames,onClearRR,eventInfo,onEventInfo,history,onRestore,onRemoveHistory}){
   const[showAttPaste,setShowAttPaste]=useState(false);
   const[showRRPaste,setShowRRPaste]=useState(false);
   const[attText,setAttText]=useState("");
@@ -1087,14 +1087,19 @@ function StartScreen({regNames,sheets,onPasteAttendance,onPasteRR,onScan,onClear
           <div className="card-label">Previous Charts</div>
           <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
             {history.map(h=>{
-              const evtLabel=[h.event?.location,h.event?.date,h.event?.code].filter(Boolean).join(" — ")||"Untitled";
+              const title=h.event?.location||[h.event?.date,h.event?.code].filter(Boolean).join(" — ")||"Untitled";
+              const subtitle=[h.event?.location?[h.event?.date,h.event?.code].filter(Boolean).join(" — "):null,`${h.seated} seated, ${h.count} total`].filter(Boolean).join(" — ");
               return(
-                <div key={h.id} onClick={()=>onRestore(h)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#080d13",border:"1px solid rgba(125,211,252,0.08)",borderRadius:"10px",cursor:"pointer",transition:"all 0.15s"}}>
-                  <div>
-                    <div style={{color:"#e2e8f0",fontSize:"12px",fontWeight:600}}>{evtLabel}</div>
-                    <div style={{color:"#475569",fontSize:"10px",marginTop:"2px"}}>{h.date} — {h.seated} seated, {h.count} total</div>
+                <div key={h.id} style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 12px",background:"#080d13",border:"1px solid rgba(125,211,252,0.08)",borderRadius:"10px"}}>
+                  <div onClick={()=>onRestore(h)} style={{flex:1,cursor:"pointer"}}>
+                    <div style={{color:"#e2e8f0",fontSize:"12px",fontWeight:600}}>{title}</div>
+                    <div style={{color:"#475569",fontSize:"10px",marginTop:"2px"}}>{h.date}{subtitle?" — "+subtitle:""}</div>
                   </div>
-                  <div style={{color:"#7dd3fc",fontSize:"10px",fontWeight:600,flexShrink:0,marginLeft:"8px"}}>Restore</div>
+                  <div style={{display:"flex",alignItems:"center",gap:"6px",flexShrink:0}}>
+                    <div onClick={()=>onRestore(h)} style={{color:"#7dd3fc",fontSize:"10px",fontWeight:600,cursor:"pointer"}}>Restore</div>
+                    <button onClick={e=>{e.stopPropagation();if(confirm(`Remove "${title}" from history?`))onRemoveHistory(h.id)}}
+                      style={{background:"transparent",border:"none",color:"#64748b",fontSize:"13px",padding:"2px 4px",cursor:"pointer",opacity:0.5,transition:"opacity 0.15s"}}>✕</button>
+                  </div>
                 </div>
               );
             })}
@@ -1170,6 +1175,11 @@ function App(){
     if(entry.event)saveEventInfo(entry.event);
     setPhase("review");
   },[save,saveEventInfo]);
+  const removeFromHistory=useCallback((id)=>{
+    const updated=history.filter(h=>h.id!==id);
+    setHistory(updated);
+    try{localStorage?.setItem(HK,JSON.stringify(updated))}catch(e){}
+  },[history]);
   const save=useCallback(data=>{
     // Coerce all fields to strings to prevent React render crashes
     const safe=data.map(d=>({...d,seatCode:String(d.seatCode||""),score:String(d.score||""),firstName:String(d.firstName||""),rrStatus:String(d.rrStatus||""),rrDetail:String(d.rrDetail||""),groupId:d.groupId||""}));
@@ -1388,7 +1398,7 @@ function App(){
     onClearNames={()=>{setRegNames([]);localStorage?.removeItem(RK)}}
     onClearRR={()=>{save([])}}
     eventInfo={eventInfo} onEventInfo={saveEventInfo}
-    history={history} onRestore={restoreFromHistory}/>;
+    history={history} onRestore={restoreFromHistory} onRemoveHistory={removeFromHistory}/>;
 
   // ── REVIEW PHASE ──
   return(
