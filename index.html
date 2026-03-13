@@ -1404,6 +1404,8 @@ function App(){
   const[popupCell,setPopupCell]=useState(null); // {sec,row,seat,idx} or null
   const handleCellTap=useCallback((sec,row,seat,idx)=>{setPopupCell({sec,row,seat,idx})},[]);
   const closePopup=useCallback(()=>setPopupCell(null),[]);
+  const[showSettings,setShowSettings]=useState(false);
+  const[settingsPaste,setSettingsPaste]=useState("");
 
   // ── EARLY RETURNS (after all hooks) ──
   // Splash plays over loading
@@ -1448,6 +1450,7 @@ function App(){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
             <span style={{color:"#334155",fontSize:"7px",fontFamily:"monospace"}}>{BUILD}</span>
+            <button onClick={()=>setShowSettings(true)} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#94a3b8",width:"36px",height:"36px",borderRadius:"10px",fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.15s",fontFamily:"inherit"}}>⚙</button>
             <button onClick={()=>{setCapturedImages([]);setPhase("scan")}} style={{background:"linear-gradient(135deg,#4ade80,#22c55e)",border:"none",color:"#080d13",padding:"10px 16px",fontSize:"11px",borderRadius:"10px",fontWeight:700,boxShadow:"0 4px 16px rgba(74,222,128,0.2)",cursor:"pointer",transition:"all 0.2s cubic-bezier(0.34,1.56,0.64,1)",fontFamily:"inherit"}}>+ Add Sheets</button>
           </div>
         </div>
@@ -1554,6 +1557,51 @@ function App(){
           Print Chart ({validCount})
         </button>
       </div>
+
+      {/* Settings Panel */}
+      {showSettings&&(
+        <div className="cell-popup-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowSettings(false)}}>
+          <div className="cell-popup" onClick={e=>e.stopPropagation()} style={{maxHeight:"85vh",overflowY:"auto"}}>
+            <div style={{padding:"12px 18px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{color:"#e2e8f0",fontSize:"14px",fontWeight:700}}>Settings</div>
+              <button onClick={()=>setShowSettings(false)} style={{background:"rgba(255,255,255,0.06)",border:"1px solid #ffffff10",color:"#64748b",width:"34px",height:"34px",borderRadius:"10px",fontSize:"15px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+            <div style={{padding:"14px 18px"}}>
+              {/* Reg Names */}
+              <div style={{marginBottom:"16px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                  <div style={{color:"#4ade80",fontSize:"10px",fontWeight:600,letterSpacing:"1px"}}>ATTENDANCE LIST</div>
+                  <div style={{color:"#475569",fontSize:"10px"}}>{regNames.length} names</div>
+                </div>
+                <textarea placeholder="Paste attendance list here..." rows={4}
+                  style={{width:"100%",background:"#080d13",border:"1px solid #4ade8020",color:"#4ade80",padding:"10px",fontSize:"12px",borderRadius:"8px",resize:"vertical",fontFamily:"inherit"}}
+                  onPaste={e=>{const t=e.clipboardData.getData("text");if(t){e.preventDefault();handlePasteAttendance(t);setShowSettings(false)}}}/>
+                <div style={{color:"#47556980",fontSize:"9px",marginTop:"4px"}}>Paste to replace current names</div>
+                {regNames.length>0&&<button onClick={()=>{setRegNames([]);localStorage?.removeItem(RK)}} style={{marginTop:"6px",background:"#f8717115",border:"1px solid #f8717120",color:"#f87171",padding:"6px 12px",fontSize:"10px",borderRadius:"6px",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>Clear All Names</button>}
+              </div>
+              {/* RR Data */}
+              <div style={{marginBottom:"16px"}}>
+                <div style={{color:"#ea580c",fontSize:"10px",fontWeight:600,letterSpacing:"1px",marginBottom:"6px"}}>RR DATA</div>
+                <textarea placeholder="Paste RR spreadsheet here..." rows={4}
+                  style={{width:"100%",background:"#080d13",border:"1px solid #ea580c20",color:"#ea580c",padding:"10px",fontSize:"12px",borderRadius:"8px",resize:"vertical",fontFamily:"inherit"}}
+                  onPaste={e=>{const t=e.clipboardData.getData("text");if(t){e.preventDefault();handlePasteRR(t);setShowSettings(false)}}}/>
+                <div style={{color:"#47556980",fontSize:"9px",marginTop:"4px"}}>Paste to merge RR status into existing sheets</div>
+              </div>
+              {/* Event Info */}
+              <div style={{marginBottom:"16px"}}>
+                <div style={{color:"#7dd3fc",fontSize:"10px",fontWeight:600,letterSpacing:"1px",marginBottom:"6px"}}>EVENT INFO</div>
+                <div style={{display:"flex",gap:"6px",marginBottom:"6px"}}>
+                  <input value={eventInfo.location||""} onChange={e=>saveEventInfo({...eventInfo,location:e.target.value})} placeholder="Location" style={{flex:1,background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px",fontSize:"11px",borderRadius:"6px"}}/>
+                  <input value={eventInfo.date||""} onChange={e=>saveEventInfo({...eventInfo,date:e.target.value})} placeholder="Date" style={{flex:1,background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px",fontSize:"11px",borderRadius:"6px"}}/>
+                </div>
+                <input value={eventInfo.code||""} onChange={e=>saveEventInfo({...eventInfo,code:e.target.value})} placeholder="Event Code" style={{width:"100%",background:"#080d13",border:"1px solid #7dd3fc20",color:"#7dd3fc",padding:"8px",fontSize:"11px",borderRadius:"6px"}}/>
+              </div>
+              {/* Back to Start */}
+              <button onClick={()=>{setShowSettings(false);setPhase("start")}} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid #ffffff10",color:"#94a3b8",padding:"12px",fontSize:"12px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"inherit"}}>Back to Start Screen</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cell Popup */}
       {popupCell&&(()=>{
