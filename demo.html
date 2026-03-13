@@ -236,7 +236,7 @@ function bestNameMatch(ocrText,names){
 }
 
 // ── Vision API OCR via local proxy ──
-const PROXY_URL="https://lovely-pears-listen.loca.lt";
+const PROXY_URL="https://wise-camels-speak.loca.lt";
 
 async function processImage(imageDataUrl,regNames){
   try{
@@ -336,12 +336,11 @@ function Scanner({onCapture,onDone,captureCount}){
   const SHARPNESS_THRESHOLD=15;   // Min Laplacian variance for "in focus"
   const DOC_CONTRAST_THRESHOLD=40;// Min contrast range for "document present"
 
-  // Viewfinder: letter paper ratio (8.5:11) with slight padding for crop
-  // Frame shown to user
-  const VF_WIDTH=0.58;   // 58% of screen width (portrait paper on portrait phone)
-  const VF_HEIGHT=VF_WIDTH*(11/8.5); // ≈ 75% — maintains letter ratio
+  // Viewfinder: 8.5×11 landscape ratio (wider than tall)
+  const VF_WIDTH=0.88;   // 88% of screen width
+  const VF_HEIGHT=VF_WIDTH*(8.5/11); // ≈ 68% — 8.5:11 landscape
   const VF_LEFT=(1-VF_WIDTH)/2;      // centered horizontally
-  const VF_TOP=0.08;                  // near top, leave room for status bar
+  const VF_TOP=0.12;                  // below status bar
   // Crop area: slightly larger than viewfinder (3% padding each side)
   const CROP_PAD=0.03;
   const CROP_LEFT=Math.max(0,VF_LEFT-CROP_PAD);
