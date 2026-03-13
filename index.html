@@ -298,7 +298,7 @@ function Scanner({onCapture,onDone,captureCount}){
   const STABILITY_THRESHOLD=10;   // Max pixel diff for "stable"
   const STABLE_FRAMES_NEEDED=25;  // ~0.8s at 30fps — longer wait for focus
   const MOTION_THRESHOLD=30;      // Min diff for sheet swap
-  const COOLDOWN_MS=1500;         // Pause after capture
+  const COOLDOWN_MS=2500;         // Pause after capture
   const SAMPLE_SIZE=100;          // Higher resolution sampling
   const SHARPNESS_THRESHOLD=15;   // Min Laplacian variance for "in focus"
   const DOC_CONTRAST_THRESHOLD=40;// Min contrast range for "document present"
