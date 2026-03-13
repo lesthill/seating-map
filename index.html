@@ -430,36 +430,63 @@ function Scanner({onScanConfirm,onDone,captureCount,regNames}){
     setCapturedImg(dataUrl);
     setSeatGuess("");setNameSearch("");setSelectedName("");setScoreVal("");
     setStatus("confirm");
-    // Run OCR on seat code in background
     setOcrRunning(true);
+
+    // Crop just the top-right corner where seat code is and upscale it
+    const cropCanvas=document.createElement("canvas");
+    const cropW=Math.round(sw*0.35),cropH=Math.round(sh*0.10);
+    const cropX=Math.round(sw*0.55),cropY=0;
+    // Upscale 4x for better OCR
+    cropCanvas.width=cropW*4;cropCanvas.height=cropH*4;
+    const cctx=cropCanvas.getContext("2d");
+    cctx.drawImage(c,cropX,cropY,cropW,cropH,0,0,cropCanvas.width,cropCanvas.height);
+    // High contrast B&W preprocessing
+    const imgData=cctx.getImageData(0,0,cropCanvas.width,cropCanvas.height);
+    const px=imgData.data;
+    for(let i=0;i<px.length;i+=4){
+      const gray=px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114;
+      const bw=gray>160?255:0;
+      px[i]=bw;px[i+1]=bw;px[i+2]=bw;
+    }
+    cctx.putImageData(imgData,0,0);
+    const cornerDataUrl=cropCanvas.toDataURL("image/jpeg",0.95);
+
+    // Try Tesseract on the cropped corner
     try{
       const code=await ocrSeatCode(dataUrl);
-      setSeatGuess(code);
+      if(code)setSeatGuess(code);
     }catch(e){}
-    // Also try API proxy as backup
+
+    // Send BOTH the cropped corner (for seat code) and full image (for name/score) to proxy
     try{
-      const resp=await fetch(PROXY_URL,{
-        method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
-        body:JSON.stringify({image:dataUrl}),signal:AbortSignal.timeout(8000)
-      });
-      const data=await resp.json();
-      if(!data.error){
+      const[seatResp,fullResp]=await Promise.all([
+        fetch(PROXY_URL,{
+          method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
+          body:JSON.stringify({image:cornerDataUrl,mode:"seat_only"}),signal:AbortSignal.timeout(8000)
+        }).then(r=>r.json()).catch(()=>({})),
+        fetch(PROXY_URL,{
+          method:"POST",headers:{"Content-Type":"application/json","Bypass-Tunnel-Reminder":"true"},
+          body:JSON.stringify({image:dataUrl}),signal:AbortSignal.timeout(8000)
+        }).then(r=>r.json()).catch(()=>({}))
+      ]);
+      // Seat code: prefer the cropped corner result
+      const seatFromCorner=seatResp.seatCode||"";
+      const seatFromFull=fullResp.seatCode||"";
+      const bestSeat=seatFromCorner||seatFromFull;
+      if(bestSeat){
         setSeatGuess(prev=>{
-          // Only override if we didn't get anything from local OCR
-          if(!prev&&data.seatCode){
-            let sc=data.seatCode.toUpperCase().replace(/\s/g,"");
-            const m=sc.match(/([A-D])-?(\d)-?(\d)/);
-            if(m){let s=parseInt(m[3]);if(s===0)s=1;return `${m[1]}${m[2]}-${s}`;}
-            return sc;
-          }
-          return prev;
+          if(prev)return prev;// keep Tesseract result if it found something
+          let sc=bestSeat.toUpperCase().replace(/\s/g,"");
+          const m=sc.match(/([A-D])-?(\d)-?(\d)/);
+          if(m){let s=parseInt(m[3]);if(s===0)s=1;return `${m[1]}${m[2]}-${s}`;}
+          return sc;
         });
-        if(data.firstName){
-          setSelectedName(prev=>prev||data.firstName);
-          setNameSearch(prev=>prev||data.firstName);
-        }
-        if(data.score)setScoreVal(prev=>prev||String(data.score));
       }
+      if(fullResp.firstName){
+        setSelectedName(prev=>prev||fullResp.firstName);
+        setNameSearch(prev=>prev||fullResp.firstName);
+      }
+      if(fullResp.score)setScoreVal(prev=>prev||String(fullResp.score));
     }catch(e){}
     setOcrRunning(false);
   },[status]);
