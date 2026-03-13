@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Seat Chart">
 <meta name="theme-color" content="#080d13">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2VhdGluZyBNYXAgR2VuZXJhdG9yIiwic2hvcnRfbmFtZSI6IlNlYXQgTWFwIiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwODBkMTMiLCJ0aGVtZV9jb2xvciI6IiMwODBkMTMiLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0In0=">
 <title>Seat Chart</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -82,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b49-0313";
+const BUILD="b55-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";
 
 // Error boundary to catch render crashes
@@ -433,20 +436,24 @@ function Scanner({onScanConfirm,onDone,captureCount,regNames}){
     setOcrRunning(true);
 
     // Crop just the top-right corner where seat code is and upscale it
+    // Seat code is handwritten at extreme top-right of paper, next to "Apr2024"
     const cropCanvas=document.createElement("canvas");
-    const cropW=Math.round(sw*0.35),cropH=Math.round(sh*0.10);
-    const cropX=Math.round(sw*0.55),cropY=0;
-    // Upscale 4x for better OCR
-    cropCanvas.width=cropW*4;cropCanvas.height=cropH*4;
+    const cropW=Math.round(sw*0.32),cropH=Math.round(sh*0.12);
+    const cropX=Math.round(sw*0.67),cropY=Math.round(sh*0.01);
+    // Upscale 3x for better OCR (natural color, no B&W)
+    cropCanvas.width=cropW*3;cropCanvas.height=cropH*3;
     const cctx=cropCanvas.getContext("2d");
     cctx.drawImage(c,cropX,cropY,cropW,cropH,0,0,cropCanvas.width,cropCanvas.height);
-    // High contrast B&W preprocessing
+    // Light contrast boost only - don't destroy handwriting with B&W threshold
     const imgData=cctx.getImageData(0,0,cropCanvas.width,cropCanvas.height);
     const px=imgData.data;
     for(let i=0;i<px.length;i+=4){
-      const gray=px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114;
-      const bw=gray>160?255:0;
-      px[i]=bw;px[i+1]=bw;px[i+2]=bw;
+      // Increase contrast: push darks darker and lights lighter
+      for(let ch=0;ch<3;ch++){
+        let v=px[i+ch];
+        v=((v/255-0.5)*1.8+0.5)*255;
+        px[i+ch]=Math.max(0,Math.min(255,v));
+      }
     }
     cctx.putImageData(imgData,0,0);
     const cornerDataUrl=cropCanvas.toDataURL("image/jpeg",0.95);
@@ -469,15 +476,18 @@ function Scanner({onScanConfirm,onDone,captureCount,regNames}){
           body:JSON.stringify({image:dataUrl}),signal:AbortSignal.timeout(8000)
         }).then(r=>r.json()).catch(()=>({}))
       ]);
-      // Seat code: prefer the cropped corner result
+      // Seat code: prefer full image (more context), fallback to corner crop
       const seatFromCorner=seatResp.seatCode||"";
       const seatFromFull=fullResp.seatCode||"";
-      const bestSeat=seatFromCorner||seatFromFull;
+      // Validate: must start with A-D letter
+      const validCorner=/^[A-D]/i.test(seatFromCorner)?seatFromCorner:"";
+      const bestSeat=seatFromFull||validCorner;
       if(bestSeat){
         setSeatGuess(prev=>{
           if(prev)return prev;// keep Tesseract result if it found something
-          let sc=bestSeat.toUpperCase().replace(/\s/g,"");
-          const m=sc.match(/([A-D])-?(\d)-?(\d)/);
+          let sc=bestSeat.toUpperCase().replace(/[\s\-]+/g,"");
+          // Extract letter + 2 digits from anywhere in the string (e.g. "C14" → C,1,4)
+          const m=sc.match(/([A-D]).*?(\d).*?(\d)\s*$/);
           if(m){let s=parseInt(m[3]);if(s===0)s=1;return `${m[1]}${m[2]}-${s}`;}
           return sc;
         });
