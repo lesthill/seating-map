@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b70-0313";
+const BUILD="b71-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -945,10 +945,10 @@ function generatePDF(sheets,eventInfo){
   // ── Page geometry ──
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:"landscape",unit:"pt",format:"letter"});
-  const PW=792,PH=612,M=24;
+  const PW=792,PH=612,M=12;
   const hasEvt=evt.location||evt.date||evt.code;
-  const evtH=hasEvt?18:0;
-  const hdrH=22,colH=14,rowW=16,legH=20,gap=14;
+  const evtH=hasEvt?14:0;
+  const hdrH=16,colH=10,rowW=12,legH=0,gap=6;
 
   // ── Smart layout: figure out how many sections fit per row ──
   // Try all sections on one row first, then 2 rows, etc.
@@ -986,10 +986,10 @@ function generatePDF(sheets,eventInfo){
     const avail=PW-2*M-bLabels-bGaps;
     cW=Math.min(cW,Math.floor(avail/bCols));
   }
-  cW=Math.max(36,Math.min(100,cW));
+  cW=Math.max(32,cW);
   const availH=PH-2*M-evtH-legH-(hdrH+colH)*numRowBands-gap*(numRowBands-1);
   cH=Math.floor(availH/(maxR*numRowBands));
-  cH=Math.max(28,Math.min(64,cH));
+  cH=Math.max(26,cH);
 
   // Font sizes proportional to cell
   const fName=Math.max(5,Math.min(10,cW*0.15,cH*0.17));
@@ -1124,27 +1124,7 @@ function generatePDF(sheets,eventInfo){
     bandY+=hdrH+colH+maxR*cH+gap;
   }); // end bands.forEach
 
-  // ── Legend ──
-  const ly=PH-M-legH+4;
-  let lx=M;
-  doc.setFont("Helvetica","bold");doc.setFontSize(6);doc.setTextColor(50,55,70);
-  doc.text("RR STATUS:",lx,ly+7);lx+=48;
-  const rrLeg=[["Approved",[180,235,200]],["No STI",[240,220,235]],["Decline",[255,200,200]],["Range (e.g. 10-30k)",[255,225,190]],["Need SSN / Verify",[220,215,250]]];
-  rrLeg.forEach(([label,bg])=>{
-    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(lx,ly-1,10,10,"F");
-    doc.setLineWidth(0.3);doc.setDrawColor(170,175,185);doc.rect(lx,ly-1,10,10);
-    doc.setFont("Helvetica","normal");doc.setFontSize(5.5);doc.setTextColor(50,55,65);
-    doc.text(label,lx+13,ly+6);lx+=doc.getTextWidth(label)+20;
-  });
-  lx+=10;
-  doc.setFont("Helvetica","bold");doc.setFontSize(6);doc.setTextColor(50,55,70);
-  doc.text("SCORE BAND:",lx,ly+7);lx+=52;
-  [["Score (A) = 1",[10,120,100],[180,235,220]],["Score (B) = 2",[160,100,0],[255,230,170]],["Score (C) = 3",[190,40,40],[255,200,200]]].forEach(([label,tc,bg])=>{
-    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(lx,ly,12,8,"F");
-    doc.setLineWidth(0.2);doc.setDrawColor(170);doc.rect(lx,ly,12,8);
-    doc.setFont("Helvetica","bold");doc.setFontSize(5.5);doc.setTextColor(tc[0],tc[1],tc[2]);
-    doc.text(label,lx+15,ly+6);lx+=doc.getTextWidth(label)+24;
-  });
+  // Legend omitted to maximize chart space
 
   return doc;
 }
