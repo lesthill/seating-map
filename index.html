@@ -85,7 +85,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
 <script type="text/babel" data-type="module">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
-const BUILD="b69-0313";
+const BUILD="b70-0313";
 const SK="seatmap-v7";const RK="seatmap-reg-v3";const HK="seatmap-history-v2";const PK="seatmap-pairs-v1";
 
 // Error boundary to catch render crashes
@@ -197,7 +197,7 @@ function bestNameMatch(ocrText,names){
 }
 
 // ── OCR: Local Tesseract.js (primary) + API proxy (fallback) ──
-const PROXY_URL="https://issn-plc-referred-objective.trycloudflare.com";
+const PROXY_URL="https://rivers-distances-proxy-approximate.trycloudflare.com";
 let tesseractWorker=null;
 
 async function getTesseractWorker(){
